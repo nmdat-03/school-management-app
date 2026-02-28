@@ -1,8 +1,8 @@
-import Announcements from "@/components/Annoucements";
-import BigCalendar from "@/components/BigCalendar";
-import FormModal from "@/components/FormModal";
-import Performance from "@/components/Performance";
-import { role } from "@/lib/data";
+import BigCalendarContainer from "@/components/BigCalendarContainer";
+import FormContainer from "@/components/FormContainer";
+import StudentAttendanceCard from "@/components/StudentAttendanceCard";
+import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
 import {
   BookOpenCheck,
   CalendarClock,
@@ -18,8 +18,41 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
-const SingleStudentPage = () => {
+const SingleStudentPage = async ({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) => {
+
+  const { id } = await params;
+
+  if (!id) {
+    return notFound();
+  }
+
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
+  const student = await prisma.student.findUnique({
+    where: { id },
+    include: {
+      class: {
+        include: {
+          _count: { select: { schedules: true } },
+          supervisor: true,
+          grade: true,
+        },
+      },
+    },
+  });
+
+
+  if (!student) {
+    return notFound();
+  }
+
   return (
     <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
       {/* LEFT */}
@@ -27,15 +60,15 @@ const SingleStudentPage = () => {
         {/* TOP */}
         <div className="flex flex-col lg:flex-row gap-4">
           {/* USER INFO CARD */}
-          <div className="bg-white p-4 rounded-md flex-1 flex flex-col md:flex-row gap-6">
+          <div className="bg-white p-4 rounded-xl flex-1 flex flex-col md:flex-row gap-6 shadow-md">
             {/* Image */}
             <div className="flex justify-center md:justify-start">
               <Image
-                src="https://images.pexels.com/photos/5414817/pexels-photo-5414817.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                src={student.img || "/default-avatar.png"}
                 alt=""
                 width={144}
                 height={144}
-                className="w-36 h-36 rounded-md object-cover"
+                className="w-36 h-36 rounded-xl object-cover"
               />
             </div>
 
@@ -43,24 +76,12 @@ const SingleStudentPage = () => {
             <div className="flex-1 flex flex-col gap-4 items-center md:items-start text-center md:text-left">
               {/* Name */}
               <div className="flex items-center gap-4">
-                <h1 className="text-xl font-semibold">Cameron Moran</h1>
+                <h1 className="text-xl font-semibold">{student.name + " " + student.surname}</h1>
                 {role === "admin" && (
-                  <FormModal
+                  <FormContainer
                     table="student"
                     type="update"
-                    data={{
-                      id: 1,
-                      username: "deanguerrero",
-                      email: "deanguerrero@gmail.com",
-                      password: "password",
-                      firstName: "Dean",
-                      lastName: "Guerrero",
-                      phone: "+1 234 567 89",
-                      address: "1234 Main St, Anytown, USA",
-                      dateOfBirth: "2000-01-01",
-                      sex: "male",
-                      img: "https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=1200",
-                    }}
+                    data={student}
                   />
                 )}
               </div>
@@ -70,24 +91,24 @@ const SingleStudentPage = () => {
                 <div className="flex-1 flex flex-col gap-3">
                   <div className="flex items-center gap-2">
                     <CalendarDays size={16} />
-                    <span className="text-black font-semibold">01 / 01 / 2025</span>
+                    <span className="text-black font-semibold">{new Intl.DateTimeFormat("vi-VN").format(student.birthday)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone size={16} />
                     <span className="text-black font-semibold">
-                      +0123 456 789
+                      {student.phone || "-"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail size={16} />
                     <span className="text-black font-semibold">
-                      user@gmail.com
+                      {student.email || "-"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPinHouse size={16} />
                     <span className="text-black font-semibold">
-                      1234 Main St, Anytown, USA
+                      {student.address || "-"}
                     </span>
                   </div>
                 </div>
@@ -97,21 +118,23 @@ const SingleStudentPage = () => {
                     <School size={16} />
                     <p className="text-gray-500">
                       Grade:{" "}
-                      <span className="text-black font-semibold">6th</span>
+                      <span className="text-black font-semibold">{student.class.grade.level}th</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <LibraryBig size={16} />
                     <p className="text-gray-500">
                       Class:{" "}
-                      <span className="text-black font-semibold">6A1</span>
+                      <span className="text-black font-semibold">{student.class.name}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <User size={16} />
                     <p className="text-gray-500">
                       Advisor:{" "}
-                      <span className="text-black font-semibold">John Doe</span>
+                      <span className="text-black font-semibold">{student.class.supervisor
+                        ? `${student.class.supervisor.name} ${student.class.supervisor.surname}`
+                        : "-"}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -129,9 +152,9 @@ const SingleStudentPage = () => {
           </div>
         </div>
         {/* BOTTOM */}
-        <div className="h-[800px] p-4 mt-4 bg-white rounded-md">
+        <div className="h-[1260px] p-4 mt-4 bg-white rounded-xl shadow-md">
           <h1 className="font-semibold">Student&apos;s Schedule</h1>
-          <BigCalendar />
+          <BigCalendarContainer type="classId" id={student.class.id} />
         </div>
       </div>
 
@@ -140,77 +163,76 @@ const SingleStudentPage = () => {
         {/* SMALL CARDS */}
         <div className="flex gap-4 justify-between flex-wrap">
           {/* CARD */}
-          <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
+          <div className="relative bg-white p-4 rounded-xl flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%] shadow-md overflow-hidden">
+            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-green-300 to-green-400"></div>
             <UserCheck />
-            <div className="">
-              <h1 className="text-xl font-semibold">90%</h1>
-              <span className="text-sm text-gray-400">Attendance</span>
-            </div>
+            <StudentAttendanceCard id={student.id} />
           </div>
           {/* CARD */}
-          <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
+          <div className="relative bg-white p-4 rounded-xl flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%] shadow-md overflow-hidden">
+            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-blue-300 to-blue-400"></div>
             <School />
-            <div className="">
-              <h1 className="text-xl font-semibold">6th</h1>
+            <div>
+              <h1 className="text-xl font-semibold">{student.class.grade.level}th</h1>
               <span className="text-sm text-gray-400">Grade</span>
             </div>
           </div>
           {/* CARD */}
-          <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
+          <div className="relative bg-white p-4 rounded-xl flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%] shadow-md overflow-hidden">
+            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-purple-300 to-purple-400"></div>
             <BookOpenCheck />
-            <div className="">
-              <h1 className="text-xl font-semibold">18</h1>
+            <div>
+              <h1 className="text-xl font-semibold">{student.class._count.schedules}</h1>
               <span className="text-sm text-gray-400">Lessons</span>
             </div>
           </div>
           {/* CARD */}
-          <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
+          <div className="relative bg-white p-4 rounded-xl flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%] shadow-md overflow-hidden">
+            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-yellow-300 to-yellow-400"></div>
             <Shapes />
-            <div className="">
-              <h1 className="text-xl font-semibold">6A</h1>
+            <div>
+              <h1 className="text-xl font-semibold">{student.class.name}</h1>
               <span className="text-sm text-gray-400">Class</span>
             </div>
           </div>
         </div>
 
         {/* SHORTCUTS */}
-        <div className="bg-white p-4 rounded-md">
+        <div className="bg-white p-4 rounded-xl shadow-md">
           <h1 className="text-xl font-semibold">Shortcuts</h1>
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-black">
             <Link
-              className="p-3 border border-gray-300 rounded-md hover:scale-105 hover:shadow-md transition-all duration-300"
-              href="/"
+              className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
+              href={`/list/schedules?classId=${student.class.id}`}
             >
               Student&apos;s Lessons
             </Link>
             <Link
-              className="p-3 border border-gray-300 rounded-md hover:scale-105 hover:shadow-md transition-all duration-300"
-              href="/"
+              className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
+              href={`/list/teachers?classId=${student.class.id}`}
             >
               Student&apos;s Teachers
             </Link>
             <Link
-              className="p-3 border border-gray-300 rounded-md hover:scale-105 hover:shadow-md transition-all duration-300"
-              href="/"
+              className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
+              href={`/list/exams?classId=${student.class.id}`}
             >
               Student&apos;s Exams
             </Link>
             <Link
-              className="p-3 border border-gray-300 rounded-md hover:scale-105 hover:shadow-md transition-all duration-300"
-              href="/"
+              className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
+              href={`/list/assignments?classId=${student.class.id}`}
             >
               Student&apos;s Assignments
             </Link>
             <Link
-              className="p-3 border border-gray-300 rounded-md hover:scale-105 hover:shadow-md transition-all duration-300"
-              href="/"
+              className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
+              href={`/list/results?studentId=${student.id}`}
             >
               Student&apos;s Results
             </Link>
           </div>
         </div>
-        {/* <Performance />
-        <Announcements /> */}
       </div>
     </div>
   );

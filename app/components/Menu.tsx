@@ -1,5 +1,6 @@
 "use client"
 
+import { useUser } from "@clerk/nextjs";
 import {
   Backpack,
   BellRing,
@@ -8,18 +9,15 @@ import {
   CalendarDays,
   FileCheckCorner,
   FilePen,
+  Flag,
   GraduationCap,
   House,
-  LogOut,
   MessageSquareText,
   Presentation,
   School,
-  Settings,
   UserCheck,
-  UserRound,
   Users,
 } from "lucide-react";
-import { role } from "../lib/data";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -64,9 +62,9 @@ const menuItems = [
         visible: ["admin", "teacher"],
       },
       {
-        icon: <BookOpen />,
-        label: "Lessons",
-        href: "/list/lessons",
+        icon: <CalendarDays />,
+        label: "Schedules",
+        href: "/list/schedules",
         visible: ["admin", "teacher"],
       },
       {
@@ -94,7 +92,7 @@ const menuItems = [
         visible: ["admin", "teacher", "student", "parent"],
       },
       {
-        icon: <CalendarDays />,
+        icon: <Flag />,
         label: "Events",
         href: "/list/events",
         visible: ["admin", "teacher", "student", "parent"],
@@ -113,34 +111,16 @@ const menuItems = [
       },
     ],
   },
-  {
-    title: "OTHER",
-    items: [
-      {
-        icon: <UserRound />,
-        label: "Profile",
-        href: "/profile",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: <Settings />,
-        label: "Settings",
-        href: "/settings",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: <LogOut />,
-        label: "Logout",
-        href: "/logout",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-    ],
-  },
 ];
 
 const Menu = () => {
 
+  const { user, isLoaded } = useUser();
   const pathname = usePathname();
+
+  if (!isLoaded) return null;
+
+  const role = user?.publicMetadata.role as string;
 
   return (
     <div className="mt-4 text-sm">
@@ -156,7 +136,7 @@ const Menu = () => {
                   href={item.href}
                   key={item.label}
                   className={`flex items-center justify-center lg:justify-start gap-4 py-2 md:px-2 rounded-md transition-colors
-                    ${pathname === item.href
+                    ${pathname.startsWith(item.href)
                       ? "bg-blue-100 text-blue-600 font-medium"
                       : "text-gray-500 hover:bg-gray-100"
                     }
