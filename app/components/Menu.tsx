@@ -5,8 +5,8 @@ import {
   Backpack,
   BellRing,
   BookCheck,
-  BookOpen,
   CalendarDays,
+  Calendars,
   FileCheckCorner,
   FilePen,
   Flag,
@@ -65,6 +65,12 @@ const menuItems = [
         icon: <CalendarDays />,
         label: "Schedules",
         href: "/list/schedules",
+        visible: ["admin", "teacher"],
+      },
+      {
+        icon: <Calendars />,
+        label: "Academic Years",
+        href: "/list/academic-years",
         visible: ["admin", "teacher"],
       },
       {

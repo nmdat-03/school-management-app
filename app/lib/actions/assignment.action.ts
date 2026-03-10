@@ -1,15 +1,17 @@
 "use server";
 
 import { ActionResult } from "@/components/FormModal";
-import { ExamSchema, examSchema } from "../formValidationSchemas";
+import { AssignmentSchema, assignmentSchema } from "../formValidationSchemas";
 import prisma from "../prisma";
 import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 
 /*-------------------------------------------------------*/
-/*                    CREATE EXAM                        */
+/*                  CREATE ASSIGNMENT                    */
 /*-------------------------------------------------------*/
-export async function createExam(data: ExamSchema): Promise<ActionResult> {
+export async function createAssignment(
+  data: AssignmentSchema,
+): Promise<ActionResult> {
   try {
     const { sessionClaims } = await auth();
     const role = (sessionClaims?.metadata as { role?: string })?.role;
@@ -18,8 +20,8 @@ export async function createExam(data: ExamSchema): Promise<ActionResult> {
       throw new Error("Unauthorized");
     }
 
-    if (data.startTime >= data.endTime) {
-      throw new Error("Invalid exam time");
+    if (data.startDate >= data.dueDate) {
+      throw new Error("Invalid assignment time");
     }
 
     const semester = await prisma.semester.findUnique({
@@ -31,11 +33,11 @@ export async function createExam(data: ExamSchema): Promise<ActionResult> {
       throw new Error("Semester not in active academic year");
     }
 
-    await prisma.exam.create({
+    await prisma.assignment.create({
       data: {
         title: data.title,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        startDate: data.startDate,
+        dueDate: data.dueDate,
         maxScore: data.maxScore ?? 10,
         subjectId: data.subjectId,
         classId: data.classId,
@@ -44,30 +46,32 @@ export async function createExam(data: ExamSchema): Promise<ActionResult> {
       },
     });
 
-    revalidatePath("/exams");
+    revalidatePath("/assignments");
 
     return { success: true };
   } catch (error) {
-    console.log("Create exam failed:", error);
+    console.log("Create assignment failed:", error);
     return { success: false };
   }
 }
 
 /*-------------------------------------------------------*/
-/*                    UPDATE EXAM                        */
+/*                 UPDATE ASSIGNMENT                     */
 /*-------------------------------------------------------*/
-export async function updateExam(data: ExamSchema): Promise<ActionResult> {
+export async function updateAssignment(
+  data: AssignmentSchema,
+): Promise<ActionResult> {
   try {
-    if (!data.id) throw new Error("Missing exam id");
+    if (!data.id) throw new Error("Missing assignment id");
 
-    examSchema.parse(data);
+    assignmentSchema.parse(data);
 
-    await prisma.exam.update({
+    await prisma.assignment.update({
       where: { id: data.id },
       data: {
         title: data.title,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        startDate: data.startDate,
+        dueDate: data.dueDate,
         maxScore: data.maxScore,
 
         subjectId: data.subjectId,
@@ -77,28 +81,28 @@ export async function updateExam(data: ExamSchema): Promise<ActionResult> {
       },
     });
 
-    revalidatePath("/exams");
+    revalidatePath("/assignments");
     return { success: true };
   } catch (error) {
-    console.log("Update exam failed: ", error);
+    console.log("Update assignment failed: ", error);
     return { success: false };
   }
 }
 
 /*-------------------------------------------------------*/
-/*                    DELETE EXAM                        */
+/*                  DELETE ASSIGNMENT                    */
 /*-------------------------------------------------------*/
-export const deleteExam = async (id: number): Promise<ActionResult> => {
+export const deleteAssignment = async (id: number): Promise<ActionResult> => {
   try {
-    await prisma.exam.delete({
+    await prisma.assignment.delete({
       where: { id },
     });
 
-    revalidatePath("/exams");
+    revalidatePath("/assignments");
 
     return { success: true };
   } catch (error) {
-    console.log("Delete exam failed: ", error);
+    console.log("Delete assignment failed: ", error);
     return { success: false };
   }
 };

@@ -35,23 +35,35 @@ const SingleStudentPage = async ({
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 
+  const [classes] = await Promise.all([
+    prisma.class.findMany(),
+  ]);
+
+  const relatedData = { classes };
+
   const student = await prisma.student.findUnique({
     where: { id },
     include: {
-      class: {
+      enrollments: {
         include: {
-          _count: { select: { schedules: true } },
-          supervisor: true,
-          grade: true,
+          class: {
+            include: {
+              _count: { select: { schedules: true } },
+              supervisor: true,
+              grade: true,
+            },
+          },
         },
       },
     },
   });
 
-
   if (!student) {
     return notFound();
   }
+
+  const enrollment = student.enrollments[0];
+  const studentClass = enrollment?.class;
 
   return (
     <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
@@ -82,6 +94,7 @@ const SingleStudentPage = async ({
                     table="student"
                     type="update"
                     data={student}
+                    relatedData={relatedData}
                   />
                 )}
               </div>
@@ -96,19 +109,19 @@ const SingleStudentPage = async ({
                   <div className="flex items-center gap-2">
                     <Phone size={16} />
                     <span className="text-black font-semibold">
-                      {student.phone || "-"}
+                      {student.phone || " - "}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail size={16} />
                     <span className="text-black font-semibold">
-                      {student.email || "-"}
+                      {student.email || " - "}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPinHouse size={16} />
                     <span className="text-black font-semibold">
-                      {student.address || "-"}
+                      {student.address || " - "}
                     </span>
                   </div>
                 </div>
@@ -118,23 +131,23 @@ const SingleStudentPage = async ({
                     <School size={16} />
                     <p className="text-gray-500">
                       Grade:{" "}
-                      <span className="text-black font-semibold">{student.class.grade.level}th</span>
+                      <span className="text-black font-semibold">{studentClass.grade.level}th</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <LibraryBig size={16} />
                     <p className="text-gray-500">
                       Class:{" "}
-                      <span className="text-black font-semibold">{student.class.name}</span>
+                      <span className="text-black font-semibold">{studentClass.name}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <User size={16} />
                     <p className="text-gray-500">
                       Advisor:{" "}
-                      <span className="text-black font-semibold">{student.class.supervisor
-                        ? `${student.class.supervisor.name} ${student.class.supervisor.surname}`
-                        : "-"}</span>
+                      <span className="text-black font-semibold">{studentClass.supervisor
+                        ? `${studentClass.supervisor.name} ${studentClass.supervisor.surname}`
+                        : " - "}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -154,7 +167,7 @@ const SingleStudentPage = async ({
         {/* BOTTOM */}
         <div className="h-[1260px] p-4 mt-4 bg-white rounded-xl shadow-md">
           <h1 className="font-semibold">Student&apos;s Schedule</h1>
-          <BigCalendarContainer type="classId" id={student.class.id} />
+          <BigCalendarContainer type="classId" id={studentClass.id} />
         </div>
       </div>
 
@@ -173,7 +186,7 @@ const SingleStudentPage = async ({
             <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-blue-300 to-blue-400"></div>
             <School />
             <div>
-              <h1 className="text-xl font-semibold">{student.class.grade.level}th</h1>
+              <h1 className="text-xl font-semibold">{studentClass.grade.level}th</h1>
               <span className="text-sm text-gray-400">Grade</span>
             </div>
           </div>
@@ -182,8 +195,8 @@ const SingleStudentPage = async ({
             <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-purple-300 to-purple-400"></div>
             <BookOpenCheck />
             <div>
-              <h1 className="text-xl font-semibold">{student.class._count.schedules}</h1>
-              <span className="text-sm text-gray-400">Lessons</span>
+              <h1 className="text-xl font-semibold">{studentClass._count.schedules}</h1>
+              <span className="text-sm text-gray-400">Schedules</span>
             </div>
           </div>
           {/* CARD */}
@@ -191,7 +204,7 @@ const SingleStudentPage = async ({
             <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-yellow-300 to-yellow-400"></div>
             <Shapes />
             <div>
-              <h1 className="text-xl font-semibold">{student.class.name}</h1>
+              <h1 className="text-xl font-semibold">{studentClass.name}</h1>
               <span className="text-sm text-gray-400">Class</span>
             </div>
           </div>
@@ -203,25 +216,25 @@ const SingleStudentPage = async ({
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-black">
             <Link
               className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
-              href={`/list/schedules?classId=${student.class.id}`}
+              href={`/list/schedules?classId=${studentClass.id}`}
             >
-              Student&apos;s Lessons
+              Student&apos;s Schedules
             </Link>
             <Link
               className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
-              href={`/list/teachers?classId=${student.class.id}`}
+              href={`/list/teachers?classId=${studentClass.id}`}
             >
               Student&apos;s Teachers
             </Link>
             <Link
               className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
-              href={`/list/exams?classId=${student.class.id}`}
+              href={`/list/exams?classId=${studentClass.id}`}
             >
               Student&apos;s Exams
             </Link>
             <Link
               className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
-              href={`/list/assignments?classId=${student.class.id}`}
+              href={`/list/assignments?classId=${studentClass.id}`}
             >
               Student&apos;s Assignments
             </Link>

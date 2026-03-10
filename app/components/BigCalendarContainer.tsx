@@ -14,10 +14,10 @@ const BigCalendarContainer = async ({ type, id }: Props) => {
   const schedules = await prisma.schedule.findMany({
     where: {
       ...(type === "teacherId"
-        ? { teacherId: id as string }
-        : { classId: id as number }),
+        ? { teacherId: String(id) }
+        : { classId: Number(id) }),
     },
-    include: { subject: true, class: true }
+    include: { subject: true, class: true },
   });
 
   /* ----------------------------------------------------- */
@@ -26,13 +26,13 @@ const BigCalendarContainer = async ({ type, id }: Props) => {
 
   const exams = await prisma.exam.findMany({
     where: {
-      lesson: {
-        schedule: {
-          ...(type === "teacherId"
-            ? { teacherId: id as string }
-            : { classId: id as number }),
-        },
-      },
+
+
+      ...(type === "teacherId"
+        ? { teacherId: String(id) }
+        : { classId: Number(id) }),
+
+
     },
   });
 
@@ -42,13 +42,13 @@ const BigCalendarContainer = async ({ type, id }: Props) => {
 
   const assignments = await prisma.assignment.findMany({
     where: {
-      lesson: {
-        schedule: {
-          ...(type === "teacherId"
-            ? { teacherId: id as string }
-            : { classId: id as number }),
-        },
-      },
+
+
+      ...(type === "teacherId"
+        ? { teacherId: String(id) }
+        : { classId: Number(id) }),
+
+
     },
   });
 

@@ -12,26 +12,59 @@ model Admin {
   username String @unique
 }
 
+model AcademicYear {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  startDate DateTime
+  endDate   DateTime
+
+  isActive Boolean @default(false)
+
+  semesters   Semester[]
+  enrollments Enrollment[]
+
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model Semester {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  startDate DateTime
+  endDate   DateTime
+
+  academicYearId Int
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  exams          Exam[]
+  assignments    Assignment[]
+
+  @@unique([academicYearId, name])
+}
+
 model Student {
-  id          String       @id
-  username    String       @unique
-  name        String
-  surname     String
-  email       String?      @unique
-  phone       String?      @unique
-  address     String
-  img         String?
-  gender      UserGender
-  createdAt   DateTime     @default(now())
-  parentId    String
-  parent      Parent       @relation(fields: [parentId], references: [id])
-  classId     Int
-  class       Class        @relation(fields: [classId], references: [id])
-  gradeId     Int
-  grade       Grade        @relation(fields: [gradeId], references: [id])
-  attendances Attendance[]
-  results     Result[]
-  birthday    DateTime
+  id        String     @id
+  username  String     @unique
+  name      String
+  surname   String
+  email     String?    @unique
+  phone     String?    @unique
+  address   String
+  img       String?
+  gender    UserGender
+  birthday  DateTime
+  createdAt DateTime   @default(now())
+
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id])
+
+  enrollments       Enrollment[]
+  attendances       Attendance[]
+  examResults       ExamResult[]
+  assignmentResults AssignmentResult[]
+
+  @@index([name])
+  @@index([surname])
 }
 
 model Teacher {
@@ -44,31 +77,38 @@ model Teacher {
   address   String
   img       String?
   gender    UserGender
+  birthday  DateTime
   createdAt DateTime   @default(now())
+
   subjects  Subject[]
   schedules Schedule[]
   classes   Class[]
-  birthday  DateTime
+
+  exams       Exam[]
+  assignments Assignment[]
+
+  @@index([name])
+  @@index([surname])
 }
 
 model Parent {
-  id        String    @id
-  username  String    @unique
+  id        String   @id
+  username  String   @unique
   name      String
   surname   String
-  email     String?   @unique
-  phone     String    @unique
+  email     String?  @unique
+  phone     String   @unique
   address   String
-  createdAt DateTime  @default(now())
-  students  Student[]
+  createdAt DateTime @default(now())
+
+  students Student[]
 }
 
 model Grade {
   id    Int @id @default(autoincrement())
   level Int @unique
 
-  students Student[]
-  classess Class[]
+  classes Class[]
 }
 
 model Class {
@@ -76,21 +116,55 @@ model Class {
   name     String @unique
   capacity Int
 
-  supervisorId  String?
-  supervisor    Teacher?       @relation(fields: [supervisorId], references: [id])
-  schedules     Schedule[]
-  students      Student[]
-  gradeId       Int
-  grade         Grade          @relation(fields: [gradeId], references: [id])
+  gradeId Int
+  grade   Grade @relation(fields: [gradeId], references: [id])
+
+  supervisorId String?
+  supervisor   Teacher? @relation(fields: [supervisorId], references: [id])
+
+  enrollments Enrollment[]
+
+  schedules   Schedule[]
+  exams       Exam[]
+  assignments Assignment[]
+  attendances Attendance[]
+
   events        Event[]
   announcements Announcement[]
+
+  @@index([gradeId])
+}
+
+model Enrollment {
+  id Int @id @default(autoincrement())
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  classId Int
+  class   Class @relation(fields: [classId], references: [id])
+
+  academicYearId Int
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, classId, academicYearId])
+  @@index([classId])
+  @@index([academicYearId])
+  @@index([studentId])
 }
 
 model Subject {
-  id        Int        @id @default(autoincrement())
-  name      String     @unique
-  teachers  Teacher[]
-  schedules Schedule[]
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  teachers    Teacher[]
+  schedules   Schedule[]
+  exams       Exam[]
+  assignments Assignment[]
+
+  @@index([name])
 }
 
 model Schedule {
@@ -101,24 +175,19 @@ model Schedule {
 
   subjectId Int
   subject   Subject @relation(fields: [subjectId], references: [id])
-  classId   Int
-  class     Class   @relation(fields: [classId], references: [id])
+
+  classId Int
+  class   Class @relation(fields: [classId], references: [id])
+
   teacherId String
   teacher   Teacher @relation(fields: [teacherId], references: [id])
 
-  lessons Lesson[]
-}
-
-model Lesson {
-  id   Int      @id @default(autoincrement())
-  date DateTime
-
-  scheduleId Int
-  schedule   Schedule @relation(fields: [scheduleId], references: [id])
-
-  attendances Attendance[]
-  exams       Exam[]
-  assignments Assignment[]
+  @@unique([classId, day, startTime])
+  @@unique([teacherId, day, startTime])
+  @@index([classId])
+  @@index([teacherId])
+  @@index([subjectId])
+  @@index([day])
 }
 
 model Exam {
@@ -126,10 +195,26 @@ model Exam {
   title     String
   startTime DateTime
   endTime   DateTime
+  maxScore  Int      @default(10)
+  createdAt DateTime @default(now())
 
-  lessonId Int
-  lesson   Lesson   @relation(fields: [lessonId], references: [id])
-  results  Result[]
+  subjectId Int
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  classId Int
+  class   Class @relation(fields: [classId], references: [id])
+
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+
+  semesterId Int
+  semester   Semester @relation(fields: [semesterId], references: [id])
+
+  results ExamResult[]
+
+  @@index([classId])
+  @@index([teacherId])
+  @@index([semesterId])
 }
 
 model Assignment {
@@ -137,22 +222,58 @@ model Assignment {
   title     String
   startDate DateTime
   dueDate   DateTime
+  maxScore  Int      @default(10)
+  createdAt DateTime @default(now())
 
-  lessonId Int
-  lesson   Lesson   @relation(fields: [lessonId], references: [id])
-  results  Result[]
+  subjectId Int
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  classId Int
+  class   Class @relation(fields: [classId], references: [id])
+
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+
+  semesterId Int
+  semester   Semester @relation(fields: [semesterId], references: [id])
+
+  results AssignmentResult[]
+
+  @@index([classId])
+  @@index([teacherId])
+  @@index([semesterId])
 }
 
-model Result {
-  id    Int @id @default(autoincrement())
+model ExamResult {
+  id Int @id @default(autoincrement())
+
   score Int
 
-  examId       Int?
-  exam         Exam?       @relation(fields: [examId], references: [id])
-  assignmentId Int?
-  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
-  studentId    String
-  student      Student     @relation(fields: [studentId], references: [id])
+  examId Int
+  exam   Exam @relation(fields: [examId], references: [id])
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  @@unique([examId, studentId])
+  @@index([studentId])
+  @@index([examId])
+}
+
+model AssignmentResult {
+  id Int @id @default(autoincrement())
+
+  score Int
+
+  assignmentId Int
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
+  @@index([assignmentId])
 }
 
 model Attendance {
@@ -162,8 +283,13 @@ model Attendance {
 
   studentId String
   student   Student @relation(fields: [studentId], references: [id])
-  lessonId  Int
-  lesson    Lesson  @relation(fields: [lessonId], references: [id])
+
+  classId Int
+  class   Class @relation(fields: [classId], references: [id])
+
+  @@unique([studentId, classId, date])
+  @@index([studentId])
+  @@index([classId])
 }
 
 model Event {
@@ -175,6 +301,8 @@ model Event {
 
   classId Int?
   class   Class? @relation(fields: [classId], references: [id])
+
+  @@index([classId])
 }
 
 model Announcement {
@@ -185,6 +313,8 @@ model Announcement {
 
   classId Int?
   class   Class? @relation(fields: [classId], references: [id])
+
+  @@index([classId])
 }
 
 enum UserGender {

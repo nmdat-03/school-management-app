@@ -38,6 +38,13 @@ const SingleTeacherPage = async ({
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 
+  const [subjects, classes] = await Promise.all([
+    prisma.subject.findMany(),
+    prisma.class.findMany(),
+  ]);
+
+  const relatedData = { subjects, classes };
+
   const teacher:
     | (Teacher & {
       subjects: Subject[];
@@ -90,6 +97,7 @@ const SingleTeacherPage = async ({
                     table="teacher"
                     type="update"
                     data={teacher}
+                    relatedData={relatedData}
                   />
                 )}
               </div>
@@ -137,11 +145,9 @@ const SingleTeacherPage = async ({
                     <p className="text-gray-500">
                       Main Subject:{" "}
                       <span className="text-black font-semibold">
-                        {teacher.subjects.length > 0 ? (
-                          teacher.subjects.map(s => <span key={s.id}>{s.name}</span>)
-                        ) : (
-                          <span>No subjects assigned</span>
-                        )}
+                        {teacher.subjects.length
+                          ? teacher.subjects.map((s) => s.name).join(", ")
+                          : "No subjects assigned"}
                       </span>
                     </p>
                   </div>
@@ -192,7 +198,7 @@ const SingleTeacherPage = async ({
             <School />
             <div>
               <h1 className="text-xl font-semibold">{teacher._count.subjects}</h1>
-              <span className="text-sm text-gray-400">Branches</span>
+              <span className="text-sm text-gray-400">Subjects</span>
             </div>
           </div>
           {/* CARD */}
@@ -220,7 +226,7 @@ const SingleTeacherPage = async ({
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-black">
             <Link
               className="p-3 border border-gray-300 rounded-xl hover:scale-105 hover:shadow-md transition-all duration-300"
-              href={`/list/classes?supervisorId=${teacher.id}`}
+              href={`/list/classes?teacherId=${teacher.id}`}
             >
               Teacher&apos;s Classes
             </Link>

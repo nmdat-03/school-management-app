@@ -108,8 +108,6 @@ export const studentSchema = z.object({
     z.date({ message: "Birthday is required!" }),
   ),
   gender: z.enum(["MALE", "FEMALE"], { message: "Gender is required!" }),
-  gradeId: z.coerce.number().min(1, { message: "Grade is required!" }),
-  classId: z.coerce.number().min(1, { message: "Class is required!" }),
   parentId: z.string().min(1, { message: "Parent Id is required!" }),
 });
 
@@ -134,6 +132,16 @@ export const updateStudentSchema = studentSchema.extend({
 export type UpdateStudentSchema = z.infer<typeof updateStudentSchema>;
 
 /*----------------------------------------------------------------*/
+/*                        ENROLL SCHEMA                           */
+/*----------------------------------------------------------------*/
+
+export const enrollmentSchema = z.object({
+  studentId: z.string(),
+  classId: z.coerce.number(),
+  academicYearId: z.coerce.number(),
+});
+
+/*----------------------------------------------------------------*/
 /*                        EXAM SCHEMA                             */
 /*----------------------------------------------------------------*/
 export const examSchema = z
@@ -142,7 +150,16 @@ export const examSchema = z
     title: z.string().min(1, { message: "Title name is required!" }),
     startTime: z.coerce.date({ message: "Start time is required!" }),
     endTime: z.coerce.date({ message: "End time is required!" }),
-    lessonId: z.coerce.number({ message: "Lesson is required!" }),
+    maxScore: z.coerce
+      .number()
+      .min(1, { message: "Score must be at least 1" })
+      .max(100)
+      .default(10),
+
+    subjectId: z.coerce.number({ message: "Subject is required" }),
+    classId: z.coerce.number({ message: "Class is required" }),
+    teacherId: z.string({ message: "Teacher is required" }),
+    semesterId: z.coerce.number({ message: "Semester is required" }),
   })
   .refine((data) => data.endTime > data.startTime, {
     message: "End time must be after start time",
@@ -151,6 +168,73 @@ export const examSchema = z
 
 export type ExamFormInput = z.input<typeof examSchema>;
 export type ExamSchema = z.output<typeof examSchema>;
+
+/*----------------------------------------------------------------*/
+/*                     ASSIGNMENT SCHEMA                          */
+/*----------------------------------------------------------------*/
+export const assignmentSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    title: z.string().min(1, { message: "Title name is required!" }),
+    startDate: z.coerce.date({ message: "Start time is required!" }),
+    dueDate: z.coerce.date({ message: "End time is required!" }),
+    maxScore: z.coerce
+      .number()
+      .min(1, { message: "Score must be at least 1" })
+      .max(100)
+      .default(10),
+
+    subjectId: z.coerce.number({ message: "Subject is required" }),
+    classId: z.coerce.number({ message: "Class is required" }),
+    teacherId: z.string({ message: "Teacher is required" }),
+    semesterId: z.coerce.number({ message: "Semester is required" }),
+  })
+  .refine((data) => data.dueDate > data.startDate, {
+    message: "End time must be after start time",
+    path: ["endTime"],
+  });
+
+export type AssignmentFormInput = z.input<typeof assignmentSchema>;
+export type AssignmentSchema = z.output<typeof assignmentSchema>;
+
+/*----------------------------------------------------------------*/
+/*                    ACADEMIC YEAR SCHEMA                        */
+/*----------------------------------------------------------------*/
+
+export const academicYearSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    name: z.string().min(1, { message: "Academic year name is required!" }),
+
+    semester1Start: z.coerce.date({
+      message: "Semester 1 start date is required!",
+    }),
+    semester1End: z.coerce.date({
+      message: "Semester 1 end date is required!",
+    }),
+
+    semester2Start: z.coerce.date({
+      message: "Semester 2 start date is required!",
+    }),
+    semester2End: z.coerce.date({
+      message: "Semester 2 end date is required!",
+    }),
+  })
+  .refine((data) => data.semester1End > data.semester1Start, {
+    message: "Semester 1 end must be after start",
+    path: ["semester1End"],
+  })
+  .refine((data) => data.semester2End > data.semester2Start, {
+    message: "Semester 2 end must be after start",
+    path: ["semester2End"],
+  })
+  .refine((data) => data.semester2Start > data.semester1End, {
+    message: "Semester 2 must start after Semester 1",
+    path: ["semester2Start"],
+  });
+
+export type AcademicYearFormInput = z.input<typeof academicYearSchema>;
+export type AcademicYearSchema = z.output<typeof academicYearSchema>;
 
 /*----------------------------------------------------------------*/
 /*                        PARENT SCHEMA                           */

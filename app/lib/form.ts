@@ -15,6 +15,7 @@ export type TableType =
   | "subject"
   | "class"
   | "schedule"
+  | "academicYear"
   | "exam"
   | "assignment"
   | "result"
@@ -28,10 +29,9 @@ export interface FormDataMap {
   subject: SubjectSchema;
   class: ClassSchema;
   exam: ExamSchema;
-
-  // chưa có form → undefined
   parent: ParentSchema;
   schedule: ScheduleSchema;
+  
   assignment: undefined;
   result: undefined;
   attendance: undefined;

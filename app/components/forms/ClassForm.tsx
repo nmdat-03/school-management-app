@@ -136,7 +136,7 @@ const ClassForm = ({ type, data, relatedData }: ClassFormProps) => {
                     options={[
                         { label: "", value: "" },
                         ...grades.map((g) => ({
-                            label: g.level,
+                            label: `Grade ${g.level}`,
                             value: g.id.toString(),
                         }))
                     ]}

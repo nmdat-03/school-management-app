@@ -1,3 +1,4 @@
+import FilterComponent from "@/components/FilterComponent";
 import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
@@ -6,22 +7,127 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { auth } from "@clerk/nextjs/server";
 import { Class, Schedule, Prisma, Subject, Teacher } from "@prisma/client";
-import {
-  ArrowDownWideNarrow,
-  Funnel,
-} from "lucide-react";
+import { ArrowDownWideNarrow } from "lucide-react";
 import { redirect } from "next/navigation";
 
+/* ================= TYPES ================= */
+
 type ScheduleList = Schedule & { subject: Subject } & { class: Class } & { teacher: Teacher }
+
+type SearchParams = {
+  page?: string;
+  classId?: string;
+  gradeLevel?: string;
+  search?: string;
+};
+
+/* ================= PAGE ================= */
 
 const ScheduleListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<SearchParams>;
 }) => {
 
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
+
+  const { page, ...queryParams } = await searchParams;
+
+  const currentPage = page ? Number(page) : 1;
+
+  /* ================= QUERY BUILD ================= */
+
+  const andConditions: Prisma.ScheduleWhereInput[] = [];
+
+  if (queryParams.classId) {
+    andConditions.push({
+      classId: Number(queryParams.classId),
+    });
+  }
+
+  if (queryParams.gradeLevel) {
+    andConditions.push({
+      class: {
+        grade: {
+          level: Number(queryParams.gradeLevel),
+        },
+      },
+    });
+  }
+
+  if (queryParams.search) {
+    andConditions.push({
+      OR: [
+        {
+          teacher: {
+            OR: [
+              {
+                name: {
+                  contains: queryParams.search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                surname: {
+                  contains: queryParams.search,
+                  mode: "insensitive",
+                },
+              },
+            ],
+          },
+        },
+        {
+          subject: {
+            name: {
+              contains: queryParams.search,
+              mode: "insensitive",
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  const query: Prisma.ScheduleWhereInput = andConditions.length > 0 ? { AND: andConditions } : {};
+
+  /* ================= COUNT ================= */
+
+  const count = await prisma.schedule.count({ where: query });
+
+  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
+
+  if (currentPage > totalPages && totalPages > 0) {
+    redirect(`?page=${totalPages}`);
+  }
+
+  /* ================= DATA ================= */
+
+  const data = await prisma.schedule.findMany({
+    where: query,
+    include: {
+      subject: { select: { name: true } },
+      class: { select: { name: true, grade: true } },
+      teacher: { select: { name: true, surname: true } },
+    },
+    take: ITEM_PER_PAGE,
+    skip: ITEM_PER_PAGE * (currentPage - 1),
+  });
+
+  /* ================= CLASSES ================= */
+
+  const classes = await prisma.class.findMany({
+    include: { grade: true },
+    orderBy: { name: "asc" },
+  });
+
+  /* ================= GRADES ================= */
+
+  const grades = await prisma.grade.findMany({
+    orderBy: { level: "asc" },
+  });
+
+  /* ================= TABLE ================= */
 
   const columns = [
     {
@@ -63,7 +169,6 @@ const ScheduleListPage = async ({
       : []),
   ];
 
-
   const renderRow = (item: ScheduleList) => (
     <tr
       key={item.id}
@@ -88,53 +193,7 @@ const ScheduleListPage = async ({
     </tr>
   );
 
-  const { page, ...queryParams } = await searchParams;
-
-  const p = page ? Number(page) : 1;
-
-  // URL PARAMS CONDITION
-
-  const query: Prisma.ScheduleWhereInput = {};
-
-  if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value !== undefined) {
-        switch (key) {
-          case "classId":
-            query.classId = parseInt(value);
-            break;
-          case "teacherId":
-            query.teacherId = value;
-            break;
-          case "search":
-            query.OR = [
-              { subject: { name: { contains: value, mode: "insensitive" } } },
-              { teacher: { name: { contains: value, mode: "insensitive" } } },
-            ];
-            break;
-          default:
-            break;
-        }
-      }
-    }
-  }
-
-  const count = await prisma.schedule.count({ where: query });
-
-  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
-
-  if (p > totalPages && totalPages > 0) { redirect(`?page=${totalPages}`); }
-
-  const data = await prisma.schedule.findMany({
-    where: query,
-    include: {
-      subject: { select: { name: true } },
-      class: { select: { name: true } },
-      teacher: { select: { name: true, surname: true } },
-    },
-    take: ITEM_PER_PAGE,
-    skip: ITEM_PER_PAGE * (p - 1),
-  });
+  /* ================= RETURN ================= */
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
@@ -144,9 +203,27 @@ const ScheduleListPage = async ({
         <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-4">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-200">
-              <Funnel size={18} />
-            </button>
+            <FilterComponent
+              fields={[
+                {
+                  key: "gradeLevel",
+                  label: "Grade",
+                  options: grades.map((g) => ({
+                    label: `Grade ${g.level}`,
+                    value: g.level.toString(),
+                  })),
+                },
+                {
+                  key: "classId",
+                  label: "Class",
+                  options: classes.map((c) => ({
+                    label: c.name,
+                    value: c.id.toString(),
+                    gradeLevel: c.grade.level,
+                  })),
+                },
+              ]}
+            />
             <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-200">
               <ArrowDownWideNarrow size={18} />
             </button>
@@ -159,7 +236,7 @@ const ScheduleListPage = async ({
       <Table columns={columns} renderRow={renderRow} data={data} />
 
       {/* PAGINATION */}
-      <Pagination page={p} count={count} />
+      <Pagination page={currentPage} count={count} />
     </div>
   );
 };

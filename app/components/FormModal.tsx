@@ -4,7 +4,7 @@ import { FC, useState, ReactNode, ReactElement } from "react";
 import dynamic from "next/dynamic";
 import { Plus, Edit, Trash2, TriangleAlert, X, Loader2 } from "lucide-react";
 
-import type { SubjectSchema, ClassSchema, TeacherSchema, StudentSchema, ExamSchema, ParentSchema, ScheduleSchema } from "@/lib/formValidationSchemas";
+import type { SubjectSchema, ClassSchema, TeacherSchema, StudentSchema, ExamSchema, ParentSchema, ScheduleSchema, AcademicYearSchema, AssignmentSchema } from "@/lib/formValidationSchemas";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { TableType } from "@/lib/form";
@@ -21,6 +21,9 @@ import { deleteParent } from "@/lib/actions/parent.action";
 import { deleteStudent } from "@/lib/actions/student.action";
 import { ScheduleRelatedData } from "./forms/ScheduleForm";
 import { deleteSchedule } from "@/lib/actions/schedule.action";
+import { deleteAcademicYear } from "@/lib/actions/academicYear.action";
+import { AssignmentRelatedData } from "./forms/AssignmentForm";
+import { deleteAssignment } from "@/lib/actions/assignment.action";
 
 type FormType = "create" | "update";
 type ModalType = FormType | "delete";
@@ -36,6 +39,7 @@ type DeleteIdMap = {
   student: string;
   parent: string;
   subject: number;
+  academicYear: number;
   class: number;
   schedule: number;
   exam: number;
@@ -85,6 +89,11 @@ const ClassForm = dynamic<BaseFormProps<ClassSchema, ClassRelatedData>>(
   { loading: () => <Loading /> }
 );
 
+const AcademicYearForm = dynamic<BaseFormProps<AcademicYearSchema, unknown>>(
+  () => import("./forms/AcademicYearForm"),
+  { loading: () => <Loading /> }
+);
+
 const ScheduleForm = dynamic<BaseFormProps<ScheduleSchema, ScheduleRelatedData>>(
   () => import("./forms/ScheduleForm"),
   { loading: () => <Loading /> }
@@ -92,6 +101,11 @@ const ScheduleForm = dynamic<BaseFormProps<ScheduleSchema, ScheduleRelatedData>>
 
 const ExamForm = dynamic<BaseFormProps<ExamSchema, ExamRelatedData>>(
   () => import("./forms/ExamForm"),
+  { loading: () => <Loading /> }
+);
+
+const AssignmentForm = dynamic<BaseFormProps<AssignmentSchema, AssignmentRelatedData>>(
+  () => import("./forms/AssignmentForm"),
   { loading: () => <Loading /> }
 );
 
@@ -113,11 +127,17 @@ const forms: Partial<Record<TableType, FormRenderer>> = {
   class: (type, data, relatedData) => (
     <ClassForm type={type} data={data as ClassSchema} relatedData={relatedData as ClassRelatedData} />
   ),
+  academicYear: (type, data, relatedData) => (
+    <AcademicYearForm type={type} data={data as AcademicYearSchema} relatedData={relatedData} />
+  ),
   schedule: (type, data, relatedData) => (
     <ScheduleForm type={type} data={data as ScheduleSchema} relatedData={relatedData as ScheduleRelatedData} />
   ),
   exam: (type, data, relatedData) => (
     <ExamForm type={type} data={data as ExamSchema} relatedData={relatedData as ExamRelatedData} />
+  ),
+  assignment: (type, data, relatedData) => (
+    <AssignmentForm type={type} data={data as AssignmentSchema} relatedData={relatedData as AssignmentRelatedData} />
   ),
 };
 
@@ -165,6 +185,10 @@ const RenderForm: FC<RenderFormProps> = ({
             res = await deleteParent(id as string);
             break;
 
+          case "academicYear":
+            res = await deleteAcademicYear(id as number);
+            break;
+
           case "schedule":
             res = await deleteSchedule(id as number);
             break;
@@ -179,6 +203,10 @@ const RenderForm: FC<RenderFormProps> = ({
 
           case "exam":
             res = await deleteExam(id as number);
+            break;
+
+          case "assignment":
+            res = await deleteAssignment(id as number);
             break;
 
           default:
@@ -263,7 +291,7 @@ const FormModal: FC<FormModalProps> = ({
             />
 
             <button
-              className="absolute top-4 right-4 border-2 p-1 rounded-md hover:border-red-500 hover:text-red-500 transiton-all duration-300"
+              className="absolute top-4 right-4 border-2 p-1 rounded-md hover:border-red-500 hover:text-red-500 transition-all duration-300"
               onClick={() => setOpen(false)}
             >
               <X size={16} />

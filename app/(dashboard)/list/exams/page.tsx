@@ -1,3 +1,4 @@
+import FilterComponent from "@/components/FilterComponent";
 import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
@@ -6,25 +7,186 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { auth } from "@clerk/nextjs/server";
 import { Class, Exam, Prisma, Subject, Teacher } from "@prisma/client";
-import {
-  ArrowDownWideNarrow,
-  Funnel,
-} from "lucide-react";
+import { ArrowDownWideNarrow } from "lucide-react";
 import { redirect } from "next/navigation";
 
-type ExamList = Exam & { lesson: { schedule: { subject: Subject; class: Class; teacher: Teacher; } } }
+/* ================= TYPES ================= */
+
+type ExamList = Exam & { subject: Subject; class: Class; teacher: Teacher; }
+
+type SearchParams = {
+  page?: string;
+  classId?: string;
+  gradeLevel?: string;
+  teacherId?: string;
+  search?: string;
+};
+
+/* ================= PAGE ================= */
 
 const ExamListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<SearchParams>;
 }) => {
 
   const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
 
+  const { page, ...queryParams } = await searchParams;
+
+  const currentPage = page ? Number(page) : 1;
+
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+  /* ================= QUERY BUILD ================= */
+
+  const query: Prisma.ExamWhereInput = {
+    ...(queryParams.classId && {
+      classId: Number(queryParams.classId),
+    }),
+
+    ...(queryParams.teacherId && {
+      teacherId: queryParams.teacherId,
+    }),
+
+    ...(queryParams.gradeLevel && {
+      class: {
+        grade: {
+          level: Number(queryParams.gradeLevel),
+        },
+      },
+    }),
+
+    ...(queryParams.search && {
+      OR: [
+        {
+          title: {
+            contains: queryParams.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          teacher: {
+            is: {
+              OR: [
+                {
+                  name: {
+                    contains: queryParams.search,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  surname: {
+                    contains: queryParams.search,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    }),
+  };
+
+  /* ================= ROLE CONDITIONS ================= */
+
+  switch (role) {
+    case "admin":
+      break;
+
+    case "teacher":
+      query.teacherId = currentUserId!;
+      break;
+
+    case "student":
+      query.class = {
+        enrollments: {
+          some: {
+            studentId: currentUserId!,
+          },
+        },
+      };
+      break;
+
+    case "parent":
+      query.class = {
+        enrollments: {
+          some: {
+            student: {
+              parentId: currentUserId!,
+            },
+          },
+        },
+      };
+      break;
+
+    default:
+      break;
+  }
+
+  /* ================= DATA & COUNT ================= */
+
+  const [count, data, classes, grades, subjects, teachers, semesters] = await Promise.all([
+    prisma.exam.count({ where: query }),
+
+    prisma.exam.findMany({
+      where: query,
+      include: {
+        subject: { select: { name: true } },
+        teacher: { select: { name: true, surname: true } },
+        class: { select: { name: true } },
+      },
+      orderBy: { startTime: "desc" },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (currentPage - 1),
+    }),
+
+    prisma.class.findMany({
+      include: { grade: true },
+      orderBy: { name: "asc" },
+    }),
+
+    prisma.grade.findMany({
+      orderBy: { level: "asc" },
+    }),
+
+    prisma.subject.findMany({
+      orderBy: { name: "asc" },
+    }),
+
+    prisma.teacher.findMany({
+      include: { subjects: true },
+      orderBy: { name: "asc" },
+    }),
+
+    prisma.semester.findMany({
+      orderBy: { startDate: "desc" },
+    }),
+  ]);
+
+  const relatedData = { classes, grades, subjects, teachers, semesters }
+
+  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
+
+  if (currentPage > totalPages && totalPages > 0) {
+    redirect(`?page=${totalPages}`);
+  }
+
+  /* ================= TABLE ================= */
+
   const columns = [
+    {
+      header: "Title",
+      accessor: "title",
+    },
     {
       header: "Subject",
       accessor: "subject",
@@ -59,22 +221,14 @@ const ExamListPage = async ({
       : []),
   ];
 
-
   const renderRow = (item: ExamList) => {
     const start = new Date(item.startTime);
     const end = new Date(item.endTime);
 
     const date = start.toLocaleDateString("vi-VN");
 
-    const startTime = start.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const endTime = end.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const startTime = formatTime(start);
+    const endTime = formatTime(end);
 
     return (
       <tr
@@ -82,15 +236,19 @@ const ExamListPage = async ({
         className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-blue-100"
       >
         <td className="flex items-center gap-4 p-4">
-          {item.lesson.schedule.subject.name}
+          {item.title}
         </td>
 
         <td className="hidden md:table-cell">
-          {item.lesson.schedule.class.name}
+          {item.subject.name}
         </td>
 
         <td className="hidden md:table-cell">
-          {item.lesson.schedule.teacher.name + " " + item.lesson.schedule.teacher.surname}
+          {item.class.name}
+        </td>
+
+        <td className="hidden md:table-cell">
+          {item.teacher.name + " " + item.teacher.surname}
         </td>
 
         <td className="hidden md:table-cell">
@@ -103,9 +261,9 @@ const ExamListPage = async ({
 
         <td>
           <div className="flex items-center gap-2">
-            {(role === "admin" || role === "teacher") && (
+            {(role === "admin") && (
               <>
-                <FormContainer table="exam" type="update" data={item} />
+                <FormContainer table="exam" type="update" data={item} relatedData={relatedData} />
                 <FormContainer table="exam" type="delete" id={item.id} />
               </>
             )}
@@ -115,94 +273,7 @@ const ExamListPage = async ({
     );
   };
 
-  const { page, ...queryParams } = await searchParams;
-
-  const p = page ? Number(page) : 1;
-
-  // URL PARAMS CONDITION
-
-  const query: Prisma.ExamWhereInput = {
-    lesson: {
-      schedule: {},
-    },
-  };
-
-  if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value !== undefined) {
-        switch (key) {
-          case "classId":
-            query.lesson!.schedule!.classId = parseInt(value);
-            break;
-          case "teacherId":
-            query.lesson!.schedule!.teacherId = value;
-            break;
-          case "search":
-            query.lesson!.schedule!.subject = {
-              name: { contains: value, mode: "insensitive" },
-            };
-            break;
-          default:
-            break;
-        }
-      }
-    }
-  }
-
-  // ROLE CONDITIONS
-  switch (role) {
-    case "admin":
-      break;
-    case "teacher":
-      query.lesson!.schedule!.teacherId = currentUserId!;
-      break;
-    case "student":
-      query.lesson!.schedule!.class = {
-        students: {
-          some: {
-            id: currentUserId!,
-          },
-        },
-      };
-      break;
-    case "parent":
-      query.lesson!.schedule!.class = {
-        students: {
-          some: {
-            parentId: currentUserId!,
-          },
-        },
-      };
-      break;
-
-    default:
-      break;
-  }
-
-  const count = await prisma.exam.count({ where: query });
-
-  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
-
-  if (p > totalPages && totalPages > 0) { redirect(`?page=${totalPages}`); }
-
-  const data = await prisma.exam.findMany({
-    where: query,
-    include: {
-      lesson: {
-        include: {
-          schedule: {
-            select: {
-              subject: { select: { name: true } },
-              teacher: { select: { name: true, surname: true } },
-              class: { select: { name: true } },
-            },
-          },
-        }
-      }
-    },
-    take: ITEM_PER_PAGE,
-    skip: ITEM_PER_PAGE * (p - 1),
-  });
+  /* ================= RETURN ================= */
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
@@ -212,13 +283,31 @@ const ExamListPage = async ({
         <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-4">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-200">
-              <Funnel size={18} />
-            </button>
+            <FilterComponent
+              fields={[
+                {
+                  key: "gradeLevel",
+                  label: "Grade",
+                  options: grades.map((g) => ({
+                    label: `Grade ${g.level}`,
+                    value: g.level.toString(),
+                  })),
+                },
+                {
+                  key: "classId",
+                  label: "Class",
+                  options: classes.map((c) => ({
+                    label: c.name,
+                    value: c.id.toString(),
+                    gradeLevel: c.grade.level,
+                  })),
+                },
+              ]}
+            />
             <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-200">
               <ArrowDownWideNarrow size={18} />
             </button>
-            {(role === "admin" || role === "teacher") && <FormContainer table="exam" type="create" />}
+            {(role === "admin") && (<FormContainer table="exam" type="create" relatedData={relatedData} />)}
           </div>
         </div>
       </div>
@@ -227,7 +316,7 @@ const ExamListPage = async ({
       <Table columns={columns} renderRow={renderRow} data={data} />
 
       {/* PAGINATION */}
-      <Pagination page={p} count={count} />
+      <Pagination page={currentPage} count={count} />
     </div>
   );
 };

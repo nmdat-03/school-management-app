@@ -10,24 +10,19 @@ import {
 import prisma from "../prisma";
 import { revalidatePath } from "next/cache";
 import { ActionResult } from "@/components/FormModal";
+import { createEnrollment, updateEnrollment } from "./enroll.action";
 
 /*-------------------------------------------------------*/
 /*                    CREATE STUDENT                     */
 /*-------------------------------------------------------*/
 export async function createStudent(
-  data: CreateStudentSchema,
+  data: CreateStudentSchema & {
+    classId: number;
+    academicYearId: number;
+  },
 ): Promise<ActionResult> {
   try {
     createStudentSchema.parse(data);
-
-    const classItem = await prisma.class.findUnique({
-      where: { id: data.classId },
-      include: { _count: { select: { students: true } } },
-    });
-
-    if (classItem && classItem.capacity === classItem._count.students) {
-      throw new Error("Class is full");
-    }
 
     const client = await clerkClient();
 
@@ -39,7 +34,7 @@ export async function createStudent(
       publicMetadata: { role: "student" },
     });
 
-    await prisma.student.create({
+    const student = await prisma.student.create({
       data: {
         id: user.id,
         username: data.username,
@@ -51,18 +46,22 @@ export async function createStudent(
         gender: data.gender,
         birthday: data.birthday,
         img: data.img || null,
-        gradeId: data.gradeId,
-        classId: data.classId,
         parentId: data.parentId,
       },
     });
 
+    await createEnrollment(
+      student.id,
+      data.classId,
+      data.academicYearId,
+    );
+
     revalidatePath("/students");
+
     return { success: true };
   } catch (error) {
-    console.log("Create student failed: ", error);
+    console.log("Create student failed:", error);
     return { success: false };
-    throw error;
   }
 }
 
@@ -70,7 +69,10 @@ export async function createStudent(
 /*                    UPDATE STUDENT                     */
 /*-------------------------------------------------------*/
 export async function updateStudent(
-  data: UpdateStudentSchema,
+  data: UpdateStudentSchema & {
+    classId: number;
+    academicYearId: number;
+  },
 ): Promise<ActionResult> {
   try {
     if (!data.id) throw new Error("Missing student id");
@@ -98,16 +100,21 @@ export async function updateStudent(
         gender: data.gender,
         birthday: data.birthday,
         img: data.img || null,
-        gradeId: data.gradeId,
-        classId: data.classId,
         parentId: data.parentId,
       },
     });
 
+    await updateEnrollment(
+      data.id,
+      data.classId,
+      data.academicYearId,
+    );
+
     revalidatePath("/students");
+
     return { success: true };
   } catch (error) {
-    console.log("Update student failed: ", error);
+    console.log("Update student failed:", error);
     return { success: false };
   }
 }
@@ -119,10 +126,18 @@ export const deleteStudent = async (id: string): Promise<ActionResult> => {
   try {
     const client = await clerkClient();
 
-    await prisma.student.delete({ where: { id } });
+    await prisma.enrollment.deleteMany({
+      where: { studentId: id },
+    });
+
+    await prisma.student.delete({
+      where: { id },
+    });
+
     await client.users.deleteUser(id);
 
     revalidatePath("/students");
+
     return { success: true };
   } catch (error) {
     console.log("Delete student failed:", error);

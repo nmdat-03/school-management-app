@@ -72,6 +72,18 @@ const ScheduleForm = ({ type, data, relatedData }: ScheduleFormProps) => {
         }));
     }, [selectedSubjectId, reset]);
 
+    const filteredTeachers = useMemo(() => {
+        if (!selectedSubjectId) return [];
+
+        const teacherList = relatedData?.teachers ?? [];
+
+        return teacherList.filter((teacher) =>
+            teacher.subjects.some(
+                (subject) => subject.id.toString() === selectedSubjectId
+            )
+        );
+    }, [selectedSubjectId, relatedData?.teachers]);
+
     const onSubmit = handleSubmit(async (data) => {
         setIsPending(true);
 
@@ -102,19 +114,6 @@ const ScheduleForm = ({ type, data, relatedData }: ScheduleFormProps) => {
             setIsPending(false);
         }
     });
-
-
-    const filteredTeachers = useMemo(() => {
-        if (!selectedSubjectId) return [];
-
-        const teacherList = relatedData?.teachers ?? [];
-
-        return teacherList.filter((teacher) =>
-            teacher.subjects.some(
-                (subject) => subject.id.toString() === selectedSubjectId
-            )
-        );
-    }, [selectedSubjectId, relatedData?.teachers]);
 
 
     return (

@@ -3,27 +3,27 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { InputField, SelectField } from "../FormField";
-import { ExamFormInput, examSchema, ExamSchema } from "@/lib/formValidationSchemas";
-import { createExam, updateExam } from "@/lib/actions/exam.action";
+import { AssignmentFormInput, assignmentSchema, AssignmentSchema } from "@/lib/formValidationSchemas";
+import { createAssignment, updateAssignment } from "@/lib/actions/assignment.action";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { toDateTimeLocal } from "@/lib/utils";
 
-export type ExamRelatedData = {
+export type AssignmentRelatedData = {
     subjects: { id: number; name: string }[];
     classes: { id: number; name: string }[];
     teachers: { id: string; name: string, surname: string, subjects: { id: number }[] }[];
     semesters: { id: number; name: string }[];
 };
 
-interface ExamFormProps {
+interface AssignmentFormProps {
     type: "create" | "update";
-    data?: ExamSchema;
-    relatedData?: ExamRelatedData
+    data?: AssignmentSchema;
+    relatedData?: AssignmentRelatedData
 }
 
-const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
+const AssignmentForm = ({ type, data, relatedData }: AssignmentFormProps) => {
     const router = useRouter();
     const [isPending, setIsPending] = useState(false);
 
@@ -34,13 +34,13 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
         watch,
         setValue,
         formState: { errors },
-    } = useForm<ExamFormInput>({
-        resolver: zodResolver(examSchema),
+    } = useForm<AssignmentFormInput>({
+        resolver: zodResolver(assignmentSchema),
         defaultValues: data
             ? {
                 ...data,
-                startTime: toDateTimeLocal(data.startTime),
-                endTime: toDateTimeLocal(data.endTime),
+                startDate: toDateTimeLocal(data.startDate),
+                dueDate: toDateTimeLocal(data.dueDate),
                 classId: data.classId.toString(),
                 subjectId: data.subjectId.toString(),
                 teacherId: data.teacherId,
@@ -80,17 +80,17 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
 
         startTransition(async () => {
             try {
-                const parsed = examSchema.parse(data);
+                const parsed = assignmentSchema.parse(data);
 
                 if (type === "create") {
-                    await createExam(parsed);
+                    await createAssignment(parsed);
                     reset();
                 } else {
-                    await updateExam(parsed);
+                    await updateAssignment(parsed);
                 }
 
                 toast.success(
-                    `Exam has been ${type === "create" ? "created" : "updated"}!`
+                    `Assignment has been ${type === "create" ? "created" : "updated"}!`
                 );
 
                 router.refresh();
@@ -105,18 +105,18 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
     return (
         <form className="flex flex-col gap-8" onSubmit={onSubmit}>
             <h1 className="text-xl font-semibold">
-                {type === "create" ? "Create a new exam" : "Update the exam"}
+                {type === "create" ? "Create a new assignment" : "Update the assignment"}
             </h1>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <InputField<ExamFormInput>
-                    label="Exam Title"
+                <InputField<AssignmentFormInput>
+                    label="Assignment Title"
                     name="title"
                     register={register}
                     error={errors?.title}
                 />
 
-                <SelectField<ExamFormInput>
+                <SelectField<AssignmentFormInput>
                     label="Subject"
                     name="subjectId"
                     register={register}
@@ -129,7 +129,7 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
                         }))]}
                 />
 
-                <SelectField<ExamFormInput>
+                <SelectField<AssignmentFormInput>
                     disabled={!selectedSubjectId}
                     label="Teacher"
                     name="teacherId"
@@ -144,7 +144,7 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
                     ]}
                 />
 
-                <SelectField<ExamFormInput>
+                <SelectField<AssignmentFormInput>
                     label="Class"
                     name="classId"
                     register={register}
@@ -158,24 +158,24 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
 
                 />
 
-                <InputField<ExamFormInput>
+                <InputField<AssignmentFormInput>
                     label="Start Date"
-                    name="startTime"
+                    name="startDate"
                     type="datetime-local"
                     register={register}
-                    error={errors?.startTime}
+                    error={errors?.startDate}
                 />
 
-                <InputField<ExamFormInput>
-                    label="End Date"
-                    name="endTime"
+                <InputField<AssignmentFormInput>
+                    label="Due Date"
+                    name="dueDate"
                     type="datetime-local"
                     register={register}
-                    error={errors?.endTime}
+                    error={errors?.dueDate}
                 />
 
                 {data && (
-                    <InputField<ExamFormInput>
+                    <InputField<AssignmentFormInput>
                         label="Id"
                         name="id"
                         register={register}
@@ -184,7 +184,7 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
                     />
                 )}
 
-                <SelectField<ExamFormInput>
+                <SelectField<AssignmentFormInput>
                     label="Semester"
                     name="semesterId"
                     register={register}
@@ -209,4 +209,4 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
     );
 };
 
-export default ExamForm;
+export default AssignmentForm;

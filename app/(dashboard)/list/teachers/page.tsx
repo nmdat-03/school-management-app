@@ -5,22 +5,144 @@ import TableSearch from "@/components/TableSearch";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { auth } from "@clerk/nextjs/server";
-import { Class, Prisma, Subject, Teacher } from "@prisma/client";
+import { Class, UserGender, Prisma, Subject, Teacher } from "@prisma/client";
 import {
   ArrowDownWideNarrow,
-  Funnel,
   ScanSearch,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import FilterComponent from "@/components/FilterComponent";
 
-type TeacherList = Teacher & { subjects: Subject[] } & { classes: Class[] }
+/* ================= TYPES ================= */
 
-const TeacherListPage = async ({ searchParams, }: { searchParams: Promise<{ [key: string]: string | undefined }> }) => {
+type TeacherList = Teacher & {
+  subjects: Subject[];
+  schedules: {
+    class: Class;
+  }[];
+};
 
+type SearchParams = {
+  page?: string;
+  classId?: string;
+  gradeLevel?: string;
+  subjectId?: string;
+  gender?: string;
+  search?: string;
+};
+
+/* ================= PAGE ================= */
+
+const TeacherListPage = async ({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) => {
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
+
+  const { page, ...queryParams } = await searchParams;
+
+  const currentPage = page ? Number(page) : 1;
+
+  /* ================= QUERY BUILD ================= */
+
+  const query: Prisma.TeacherWhereInput = {};
+
+  if (queryParams.gradeLevel || queryParams.classId) {
+    query.schedules = {
+      some: {
+        class: {
+          ...(queryParams.classId && {
+            id: Number(queryParams.classId),
+          }),
+          ...(queryParams.gradeLevel && {
+            grade: {
+              level: Number(queryParams.gradeLevel),
+            },
+          }),
+        },
+      },
+    };
+  }
+
+  if (queryParams.subjectId) {
+    query.subjects = {
+      some: {
+        id: Number(queryParams.subjectId),
+      },
+    };
+  }
+
+  if (queryParams.gender) {
+    query.gender = queryParams.gender as UserGender;
+  }
+
+  if (queryParams.search) {
+    query.OR = [
+      {
+        name: {
+          contains: queryParams.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        surname: {
+          contains: queryParams.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        email: {
+          contains: queryParams.search,
+          mode: "insensitive",
+        },
+      },
+    ];
+  }
+
+  /* ================= DATA ================= */
+
+  const [count, data, classes, grades, subjects] = await Promise.all([
+    prisma.teacher.count({ where: query }),
+
+    prisma.teacher.findMany({
+      where: query,
+      include: {
+        subjects: true,
+        schedules: {
+          include: {
+            class: true,
+          },
+        },
+      },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (currentPage - 1),
+    }),
+
+    prisma.class.findMany({
+      include: { grade: true },
+      orderBy: { name: "asc" },
+    }),
+
+    prisma.grade.findMany({
+      orderBy: { level: "asc" },
+    }),
+
+    prisma.subject.findMany(),
+  ]);
+
+  const relatedData = { classes, subjects }
+
+  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
+
+  if (currentPage > totalPages && totalPages > 0) {
+    redirect(`?page=${totalPages}`);
+  }
+
+  /* ================= TABLE ================= */
 
   const columns = [
     {
@@ -65,26 +187,43 @@ const TeacherListPage = async ({ searchParams, }: { searchParams: Promise<{ [key
   const renderRow = (item: TeacherList) => (
     <tr
       key={item.id}
-      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-blue-100"
+      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-blue-50"
     >
       <td className="flex items-center gap-4 p-4">
         <Image
           src={item.img || "/default-avatar.png"}
-          alt=""
+          alt="teacher"
           width={40}
           height={40}
-          className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
+          className="w-10 h-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <h3 className="font-semibold">{item.surname + " " + item.name}</h3>
-          <p className="text-xs text-gray-500">{item?.email}</p>
+          <h3 className="font-semibold">
+            {item.surname} {item.name}
+          </h3>
+          <p className="text-xs text-gray-500">{item.email}</p>
         </div>
       </td>
+
       <td className="hidden md:table-cell">{item.username}</td>
-      <td className="hidden md:table-cell">{item.gender?.[0] + item.gender?.slice(1).toLowerCase()}</td>
-      <td className="hidden md:table-cell">{item.subjects.map(subject => subject.name).join(",")}</td>
-      <td className="hidden md:table-cell">{item.classes.map(classItem => classItem.name).join(",")}</td>
-      <td className="hidden md:table-cell">{item.phone}</td>
+
+      <td className="hidden md:table-cell">
+        {item.gender.charAt(0) +
+          item.gender.slice(1).toLowerCase()}
+      </td>
+
+      <td className="hidden md:table-cell">
+        {item.subjects.map((s) => s.name).join(", ")}
+      </td>
+
+      <td className="hidden md:table-cell">
+        {item.schedules.length
+          ? [...new Set(item.schedules.map((s) => s.class.name))].join(", ")
+          : "-"}
+      </td>
+
+      <td className="hidden lg:table-cell">{item.phone}</td>
+
       <td>
         <div className="flex items-center gap-2">
           <Link href={`/list/teachers/${item.id}`}>
@@ -92,6 +231,7 @@ const TeacherListPage = async ({ searchParams, }: { searchParams: Promise<{ [key
               <ScanSearch size={16} />
             </button>
           </Link>
+
           {role === "admin" && (
             <FormContainer table="teacher" type="delete" id={item.id} />
           )}
@@ -100,76 +240,75 @@ const TeacherListPage = async ({ searchParams, }: { searchParams: Promise<{ [key
     </tr>
   );
 
-
-
-  const { page, ...queryParams } = await searchParams;
-
-  const p = page ? Number(page) : 1;
-
-  // URL PARAMS CONDITION
-  const query: Prisma.TeacherWhereInput = {};
-
-  if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value !== undefined) {
-        switch (key) {
-          case "classId":
-            query.schedules = {
-              some: {
-                classId: parseInt(value),
-              },
-            };
-            break;
-          case "search":
-            query.name = { contains: value, mode: "insensitive" };
-            break;
-          default:
-            break;
-        }
-      }
-    }
-  }
-
-  const count = await prisma.teacher.count({ where: query });
-
-  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
-
-  if (p > totalPages && totalPages > 0) { redirect(`?page=${totalPages}`); }
-
-  const data = await prisma.teacher.findMany({
-    where: query,
-    include: {
-      subjects: true,
-      classes: true,
-    },
-    take: ITEM_PER_PAGE,
-    skip: ITEM_PER_PAGE * (p - 1),
-  });
+  /* ================= RETURN ================= */
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">All Teachers</h1>
+        <h1 className="hidden md:block text-lg font-semibold">
+          All Teachers
+        </h1>
+
         <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-4">
           <TableSearch />
+
           <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-200">
-              <Funnel size={18} />
-            </button>
+
+            <FilterComponent
+              fields={[
+                {
+                  key: "gradeLevel",
+                  label: "Grade",
+                  options: grades.map((g) => ({
+                    label: `Grade ${g.level}`,
+                    value: g.level.toString(),
+                  })),
+                },
+                {
+                  key: "classId",
+                  label: "Class",
+                  options: classes.map((c) => ({
+                    label: c.name,
+                    value: c.id.toString(),
+                    gradeLevel: c.grade.level,
+                  })),
+                },
+                {
+                  key: "subjectId",
+                  label: "Subject",
+                  options: subjects.map((s) => ({
+                    label: s.name,
+                    value: s.id.toString(),
+                  })),
+                },
+                {
+                  key: "gender",
+                  label: "Gender",
+                  options: [
+                    { label: "Male", value: "MALE" },
+                    { label: "Female", value: "FEMALE" },
+                  ],
+                },
+              ]}
+            />
+
             <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-200">
               <ArrowDownWideNarrow size={18} />
             </button>
+
             {role === "admin" && (
-              <FormContainer table="teacher" type="create" />
+              <FormContainer table="teacher" type="create" relatedData={relatedData} />
             )}
           </div>
         </div>
       </div>
+
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={data} />
+
       {/* PAGINATION */}
-      <Pagination page={p} count={count} />
+      <Pagination page={currentPage} count={count} />
     </div>
   );
 };
