@@ -133,15 +133,7 @@ const AssignmentListPage = async ({
 
   /* ================= DATA & COUNT ================= */
 
-  const [
-    count,
-    data,
-    classes,
-    grades,
-    subjects,
-    semesters,
-    teachers,
-  ] = await Promise.all([
+  const [count, data, classes, grades, subjects, teachers, semesters] = await Promise.all([
     prisma.assignment.count({ where: query }),
 
     prisma.assignment.findMany({
@@ -151,6 +143,7 @@ const AssignmentListPage = async ({
         teacher: { select: { name: true, surname: true } },
         class: { select: { name: true } },
       },
+      orderBy: { startDate: "desc" },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (currentPage - 1),
     }),
@@ -165,28 +158,33 @@ const AssignmentListPage = async ({
     }),
 
     prisma.subject.findMany({
-      select: { id: true, name: true },
-    }),
-
-    prisma.class.findMany({
-      select: { id: true, name: true },
-    }),
-
-    prisma.semester.findMany({
-      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     }),
 
     prisma.teacher.findMany({
-      select: {
-        id: true,
-        name: true,
-        surname: true,
-        subjects: { select: { id: true } },
+      include: {
+        schedules: {
+          select: {
+            subjectId: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
+      orderBy: { name: "asc" },
+    }),
+
+    prisma.semester.findMany({
+      orderBy: { startDate: "desc" },
     }),
   ]);
 
-  const relatedData = { subjects, classes, semesters, teachers };
+  const relatedData = { classes, grades, subjects, teachers, semesters }
+
 
   const totalPages = Math.ceil(count / ITEM_PER_PAGE);
 

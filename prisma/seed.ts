@@ -146,27 +146,30 @@ async function main() {
     { start: "10:00", end: "10:45" },
   ];
 
-  let subjectIndex = 1;
+  const teachers = await prisma.teacher.findMany({
+    include: { subjects: true },
+  });
 
-  for (let i = 0; i < classes.length; i++) {
-    const cls = classes[i];
+  for (const day of days) {
+    for (const time of times) {
+      const shuffledTeachers = [...teachers].sort(() => Math.random() - 0.5);
 
-    const teacherId = `teacher${(i % 15) + 1}`;
+      for (let i = 0; i < classes.length; i++) {
+        const cls = classes[i];
 
-    for (const day of days) {
-      for (const time of times) {
+        const teacher = shuffledTeachers[i % shuffledTeachers.length];
+        const subjectId = teacher.subjects[0].id;
+
         await prisma.schedule.create({
           data: {
-            day: day,
+            day,
             startTime: time.start,
             endTime: time.end,
-            subjectId: subjectIndex,
+            subjectId,
             classId: cls.id,
-            teacherId: teacherId,
+            teacherId: teacher.id,
           },
         });
-
-        subjectIndex = subjectIndex === 10 ? 1 : subjectIndex + 1;
       }
     }
   }
@@ -227,11 +230,19 @@ async function main() {
   /* ------------------------------------------------ */
 
   for (let i = 1; i <= 10; i++) {
+    const examDate = new Date(2026, 3, i);
+
+    const startTime = new Date(examDate);
+    startTime.setHours(14, 0, 0);
+
+    const endTime = new Date(examDate);
+    endTime.setHours(15, 0, 0);
+
     await prisma.exam.create({
       data: {
         title: `Exam ${i}`,
-        startTime: new Date(),
-        endTime: new Date(Date.now() + 3600000),
+        startTime,
+        endTime,
         subjectId: (i % 10) + 1,
         classId: classes[i % classes.length].id,
         teacherId: `teacher${(i % 15) + 1}`,

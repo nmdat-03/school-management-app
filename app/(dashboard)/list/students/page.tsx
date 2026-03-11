@@ -121,7 +121,14 @@ const StudentListPage = async ({
     }),
 
     prisma.class.findMany({
-      include: { grade: true },
+      include: {
+        grade: true,
+        enrollments: {
+          include: {
+            student: true,
+          },
+        },
+      },
       orderBy: { name: "asc" },
     }),
 

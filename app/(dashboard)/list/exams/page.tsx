@@ -163,7 +163,19 @@ const ExamListPage = async ({
     }),
 
     prisma.teacher.findMany({
-      include: { subjects: true },
+      include: {
+        schedules: {
+          select: {
+            subjectId: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: { name: "asc" },
     }),
 

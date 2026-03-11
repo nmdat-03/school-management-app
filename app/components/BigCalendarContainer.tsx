@@ -26,13 +26,9 @@ const BigCalendarContainer = async ({ type, id }: Props) => {
 
   const exams = await prisma.exam.findMany({
     where: {
-
-
       ...(type === "teacherId"
         ? { teacherId: String(id) }
         : { classId: Number(id) }),
-
-
     },
   });
 
@@ -42,13 +38,19 @@ const BigCalendarContainer = async ({ type, id }: Props) => {
 
   const assignments = await prisma.assignment.findMany({
     where: {
-
-
       ...(type === "teacherId"
         ? { teacherId: String(id) }
         : { classId: Number(id) }),
+    },
+  });
 
+  /* ----------------------------------------------------- */
+  /*                     EVENTS                            */
+  /* ----------------------------------------------------- */
 
+  const events = await prisma.event.findMany({
+    where: {
+      ...(type === "classId" ? { classId: Number(id) } : {}),
     },
   });
 
@@ -58,6 +60,7 @@ const BigCalendarContainer = async ({ type, id }: Props) => {
       schedules={schedules}
       exams={exams}
       assignments={assignments}
+      events={events}
     />
   );
 };

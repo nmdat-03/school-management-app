@@ -13,7 +13,15 @@ import { toDateTimeLocal } from "@/lib/utils";
 export type ExamRelatedData = {
     subjects: { id: number; name: string }[];
     classes: { id: number; name: string }[];
-    teachers: { id: string; name: string, surname: string, subjects: { id: number }[] }[];
+    teachers: {
+        id: string;
+        name: string;
+        surname: string;
+        schedules: {
+            subjectId: number;
+            class: { id: number; name: string };
+        }[];
+    }[];
     semesters: { id: number; name: string }[];
 };
 
@@ -49,11 +57,12 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
             : undefined,
     });
 
-    const selectedSubjectId = watch("subjectId");
-
     const subjects = relatedData?.subjects ?? [];
-    const classes = relatedData?.classes ?? [];
     const semesters = relatedData?.semesters ?? [];
+
+    /* ================= SELECT SUBJECT => TEACHER ================= */
+
+    const selectedSubjectId = watch("subjectId");
 
     const initialSubjectId = data?.subjectId?.toString();
 
@@ -69,11 +78,45 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
         const teacherList = relatedData?.teachers ?? [];
 
         return teacherList.filter((teacher) =>
-            teacher.subjects.some(
-                (subject) => subject.id.toString() === selectedSubjectId
+            teacher.schedules.some(
+                (s) => s.subjectId === Number(selectedSubjectId)
             )
         );
     }, [selectedSubjectId, relatedData?.teachers]);
+
+    /* ================= SELECT SUBJECT => TEACHER ================= */
+
+    const selectedTeacherId = watch("teacherId");
+
+    const initialTeacherId = data?.teacherId;
+
+    useEffect(() => {
+        if (selectedTeacherId && selectedTeacherId !== initialTeacherId) {
+            setValue("classId", "");
+        }
+    }, [selectedTeacherId, initialTeacherId, setValue]);
+
+    const filteredClasses = useMemo(() => {
+        if (!selectedTeacherId || !selectedSubjectId) return [];
+
+        const teacher = relatedData?.teachers?.find(
+            (t) => t.id === selectedTeacherId
+        );
+
+        if (!teacher) return [];
+
+        const classMap = new Map<number, { id: number; name: string }>();
+
+        teacher.schedules.forEach((s) => {
+            if (s.subjectId.toString() === selectedSubjectId) {
+                classMap.set(s.class.id, s.class);
+            }
+        });
+
+        return Array.from(classMap.values());
+    }, [selectedTeacherId, selectedSubjectId, relatedData?.teachers]);
+
+    /* ================= HANDLE SUBMIT ================= */
 
     const onSubmit = handleSubmit((data) => {
         setIsPending(true);
@@ -145,13 +188,14 @@ const ExamForm = ({ type, data, relatedData }: ExamFormProps) => {
                 />
 
                 <SelectField<ExamFormInput>
+                    disabled={!selectedTeacherId || filteredClasses.length === 0}
                     label="Class"
                     name="classId"
                     register={register}
                     error={errors.classId}
                     options={[
                         { label: "Select class", value: "" },
-                        ...classes.map((c) => ({
+                        ...filteredClasses.map((c) => ({
                             label: c.name,
                             value: c.id.toString(),
                         }))]}
