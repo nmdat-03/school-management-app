@@ -4,7 +4,7 @@ import { FC, useState, ReactNode, ReactElement } from "react";
 import dynamic from "next/dynamic";
 import { Plus, Edit, Trash2, TriangleAlert, X, Loader2 } from "lucide-react";
 
-import type { SubjectSchema, ClassSchema, TeacherSchema, StudentSchema, ExamSchema, ParentSchema, ScheduleSchema, AcademicYearSchema, AssignmentSchema } from "@/lib/formValidationSchemas";
+import type { SubjectSchema, ClassSchema, TeacherSchema, StudentSchema, ExamSchema, ParentSchema, ScheduleSchema, AcademicYearSchema, AssignmentSchema, EnrollSchema } from "@/lib/formValidationSchemas";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { TableType } from "@/lib/form";
@@ -16,6 +16,7 @@ import { deleteTeacher } from "@/lib/actions/teacher.action";
 import { TeacherRelatedData } from "./forms/TeacherForm";
 import { StudentRelatedData } from "./forms/StudentForm";
 import { ExamRelatedData } from "./forms/ExamForm";
+import { EnrollRelatedData } from "./forms/EnrollForm";
 import { deleteExam } from "@/lib/actions/exam.action";
 import { deleteParent } from "@/lib/actions/parent.action";
 import { deleteStudent } from "@/lib/actions/student.action";
@@ -40,6 +41,7 @@ type DeleteIdMap = {
   parent: string;
   subject: number;
   academicYear: number;
+  enrollment: number;
   class: number;
   schedule: number;
   exam: number;
@@ -56,7 +58,9 @@ type DeleteActionMap = {
 
 type FormRenderer = (type: FormType, data?: unknown, relatedData?: unknown) => ReactNode;
 
-export type ActionResult = | { success: true } | { success: false; error?: string }
+export type ActionResult<T = undefined> =
+  | { success: true; data?: T }
+  | { success: false; error?: string };
 
 const Loading = () => (
   <div className="flex items-center justify-center p-6">
@@ -99,6 +103,11 @@ const ScheduleForm = dynamic<BaseFormProps<ScheduleSchema, ScheduleRelatedData>>
   { loading: () => <Loading /> }
 );
 
+const EnrollForm = dynamic<BaseFormProps<EnrollSchema, EnrollRelatedData>>(
+  () => import("./forms/EnrollForm"),
+  { loading: () => <Loading /> }
+);
+
 const ExamForm = dynamic<BaseFormProps<ExamSchema, ExamRelatedData>>(
   () => import("./forms/ExamForm"),
   { loading: () => <Loading /> }
@@ -132,6 +141,9 @@ const forms: Partial<Record<TableType, FormRenderer>> = {
   ),
   schedule: (type, data, relatedData) => (
     <ScheduleForm type={type} data={data as ScheduleSchema} relatedData={relatedData as ScheduleRelatedData} />
+  ),
+  enrollment: (type, data, relatedData) => (
+    <EnrollForm type={type} data={data as EnrollSchema} relatedData={relatedData as EnrollRelatedData} />
   ),
   exam: (type, data, relatedData) => (
     <ExamForm type={type} data={data as ExamSchema} relatedData={relatedData as ExamRelatedData} />

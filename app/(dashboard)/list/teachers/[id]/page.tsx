@@ -224,8 +224,6 @@ const SingleTeacherPage = async ({
 
         {/* RIGHT */}
         <div className="w-full xl:w-1/3">
-          {/* Small cards */}
-
           {/* Shortcuts */}
           <div className="bg-white p-4 rounded-xl shadow-md">
             <h1 className="text-xl font-semibold">Shortcuts</h1>

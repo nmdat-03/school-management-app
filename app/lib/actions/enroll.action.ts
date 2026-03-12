@@ -10,9 +10,22 @@ import { ActionResult } from "@/components/FormModal";
 export async function createEnrollment(
   studentId: string,
   classId: number,
-  academicYearId: number,
+  academicYearId: number
 ): Promise<ActionResult> {
   try {
+    /* check duplicate enrollment */
+    const existing = await prisma.enrollment.findFirst({
+      where: {
+        studentId,
+        academicYearId,
+      },
+    });
+
+    if (existing) {
+      throw new Error("Student already enrolled in this academic year");
+    }
+
+    /* check class capacity */
     const classItem = await prisma.class.findUnique({
       where: { id: classId },
       include: {
@@ -38,7 +51,7 @@ export async function createEnrollment(
       },
     });
 
-    revalidatePath("/students");
+    revalidatePath("/list/students");
 
     return { success: true };
   } catch (error) {
@@ -53,20 +66,30 @@ export async function createEnrollment(
 export async function updateEnrollment(
   studentId: string,
   classId: number,
-  academicYearId: number,
+  academicYearId: number
 ): Promise<ActionResult> {
   try {
-    await prisma.enrollment.updateMany({
+    const enrollment = await prisma.enrollment.findFirst({
       where: {
         studentId,
         academicYearId,
+      },
+    });
+
+    if (!enrollment) {
+      throw new Error("Enrollment not found");
+    }
+
+    await prisma.enrollment.update({
+      where: {
+        id: enrollment.id,
       },
       data: {
         classId,
       },
     });
 
-    revalidatePath("/students");
+    revalidatePath("/list/students");
 
     return { success: true };
   } catch (error) {
@@ -80,17 +103,27 @@ export async function updateEnrollment(
 /*-------------------------------------------------------*/
 export async function deleteEnrollment(
   studentId: string,
-  academicYearId: number,
+  academicYearId: number
 ): Promise<ActionResult> {
   try {
-    await prisma.enrollment.deleteMany({
+    const enrollment = await prisma.enrollment.findFirst({
       where: {
         studentId,
         academicYearId,
       },
     });
 
-    revalidatePath("/students");
+    if (!enrollment) {
+      throw new Error("Enrollment not found");
+    }
+
+    await prisma.enrollment.delete({
+      where: {
+        id: enrollment.id,
+      },
+    });
+
+    revalidatePath("/list/students");
 
     return { success: true };
   } catch (error) {

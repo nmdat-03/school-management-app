@@ -118,6 +118,7 @@ const TeacherListPage = async ({
           },
         },
       },
+      orderBy: { createdAt: "desc" },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (currentPage - 1),
     }),
@@ -148,6 +149,7 @@ const TeacherListPage = async ({
     {
       header: "Info",
       accessor: "info",
+      className: "w-80"
     },
     {
       header: "Teacher ID",
@@ -208,8 +210,12 @@ const TeacherListPage = async ({
       <td className="hidden md:table-cell">{item.username}</td>
 
       <td className="hidden md:table-cell">
-        {item.gender.charAt(0) +
-          item.gender.slice(1).toLowerCase()}
+        <span
+          className={`px-2 py-1 text-xs font-medium rounded-md text-white 
+              ${item.gender === "MALE" ? "bg-blue-300" : "bg-pink-300"} `}
+        >
+          {item.gender === "MALE" ? "Male" : "Female"}
+        </span>
       </td>
 
       <td className="hidden md:table-cell">
@@ -217,9 +223,7 @@ const TeacherListPage = async ({
       </td>
 
       <td className="hidden md:table-cell">
-        {item.schedules.length
-          ? [...new Set(item.schedules.map((s) => s.class.name))].join(", ")
-          : "-"}
+        {new Set(item.schedules.map((s) => s.class.id)).size}
       </td>
 
       <td className="hidden lg:table-cell">{item.phone}</td>

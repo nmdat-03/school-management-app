@@ -10,17 +10,13 @@ import {
 import prisma from "../prisma";
 import { revalidatePath } from "next/cache";
 import { ActionResult } from "@/components/FormModal";
-import { createEnrollment, updateEnrollment } from "./enroll.action";
 
 /*-------------------------------------------------------*/
 /*                    CREATE STUDENT                     */
 /*-------------------------------------------------------*/
 export async function createStudent(
-  data: CreateStudentSchema & {
-    classId: number;
-    academicYearId: number;
-  },
-): Promise<ActionResult> {
+  data: CreateStudentSchema,
+): Promise<ActionResult<{ id: string }>> {
   try {
     createStudentSchema.parse(data);
 
@@ -34,7 +30,7 @@ export async function createStudent(
       publicMetadata: { role: "student" },
     });
 
-    const student = await prisma.student.create({
+    await prisma.student.create({
       data: {
         id: user.id,
         username: data.username,
@@ -50,15 +46,9 @@ export async function createStudent(
       },
     });
 
-    await createEnrollment(
-      student.id,
-      data.classId,
-      data.academicYearId,
-    );
-
     revalidatePath("/students");
 
-    return { success: true };
+    return { success: true, data: { id: user.id } };
   } catch (error) {
     console.log("Create student failed:", error);
     return { success: false };
@@ -69,10 +59,7 @@ export async function createStudent(
 /*                    UPDATE STUDENT                     */
 /*-------------------------------------------------------*/
 export async function updateStudent(
-  data: UpdateStudentSchema & {
-    classId: number;
-    academicYearId: number;
-  },
+  data: UpdateStudentSchema,
 ): Promise<ActionResult> {
   try {
     if (!data.id) throw new Error("Missing student id");
@@ -103,12 +90,6 @@ export async function updateStudent(
         parentId: data.parentId,
       },
     });
-
-    await updateEnrollment(
-      data.id,
-      data.classId,
-      data.academicYearId,
-    );
 
     revalidatePath("/students");
 

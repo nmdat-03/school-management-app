@@ -53,54 +53,41 @@ const StudentListPage = async ({
 
     ...(queryParams.search && {
       OR: [
-        {
-          name: {
-            contains: queryParams.search,
-            mode: "insensitive",
-          },
-        },
-        {
-          surname: {
-            contains: queryParams.search,
-            mode: "insensitive",
-          },
-        },
-        {
-          email: {
-            contains: queryParams.search,
-            mode: "insensitive",
-          },
-        },
+        { name: { contains: queryParams.search, mode: "insensitive" } },
+        { surname: { contains: queryParams.search, mode: "insensitive" } },
+        { email: { contains: queryParams.search, mode: "insensitive" } },
       ],
     }),
 
-    enrollments: {
-      some: {
-        ...(queryParams.classId && {
-          classId: Number(queryParams.classId),
-        }),
+    ...((queryParams.classId || queryParams.teacherId || queryParams.gradeLevel) && {
+      enrollments: {
+        some: {
+          ...(queryParams.classId && {
+            classId: Number(queryParams.classId),
+          }),
 
-        class: {
-          ...(queryParams.teacherId && {
-            schedules: {
-              some: {
-                teacherId: queryParams.teacherId,
+          class: {
+            ...(queryParams.teacherId && {
+              schedules: {
+                some: {
+                  teacherId: queryParams.teacherId,
+                },
               },
-            },
-          }),
+            }),
 
-          ...(queryParams.gradeLevel && {
-            grade: {
-              level: Number(queryParams.gradeLevel),
-            },
-          }),
+            ...(queryParams.gradeLevel && {
+              grade: {
+                level: Number(queryParams.gradeLevel),
+              },
+            }),
+          },
         },
       },
-    },
+    }),
   };
 
   /* ================= DATA ================= */
-  const [count, data, classes, grades] = await Promise.all([
+  const [count, data, classes, grades, parents] = await Promise.all([
     prisma.student.count({ where: query }),
 
     prisma.student.findMany({
@@ -116,6 +103,7 @@ const StudentListPage = async ({
           },
         },
       },
+      orderBy: { createdAt: "desc" },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (currentPage - 1),
     }),
@@ -134,10 +122,20 @@ const StudentListPage = async ({
 
     prisma.grade.findMany({
       orderBy: { level: "asc" },
-    })
+    }),
+
+    prisma.parent.findMany({
+      select: {
+        id: true,
+        name: true,
+        surname: true,
+        phone: true,
+      },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
-  const relatedData = { classes }
+  const relatedData = { classes, parents }
 
   const totalPages = Math.ceil(count / ITEM_PER_PAGE);
 
@@ -151,15 +149,21 @@ const StudentListPage = async ({
     {
       header: "Info",
       accessor: "info",
+      className: "w-80"
     },
     {
-      header: "Student ID",
-      accessor: "studentId",
+      header: "Username",
+      accessor: "username",
       className: "hidden md:table-cell",
     },
     {
       header: "Gender",
       accessor: "gender",
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Class",
+      accessor: "class",
       className: "hidden md:table-cell",
     },
     {
@@ -190,34 +194,36 @@ const StudentListPage = async ({
         key={item.id}
         className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-blue-100"
       >
-        <td className="flex items-center gap-4 p-4">
+        <td className="flex items-center gap-3 p-4">
           <Image
             src={item.img || "/default-avatar.png"}
             alt=""
             width={40}
             height={40}
-            className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
+            className="md:hidden xl:block w-10 h-10 rounded-full object-cover flex-shrink-0"
           />
-
-          <div className="flex flex-col">
-            <h3 className="font-semibold">
-              {item.name} {item.surname}
-            </h3>
-
-            <p className="text-xs text-gray-500">
-              {enrollment?.class.name}
-            </p>
-          </div>
+          <h3 className="font-semibold">
+            {item.name} {item.surname}
+          </h3>
         </td>
 
         <td className="hidden md:table-cell">{item.username}</td>
 
         <td className="hidden md:table-cell">
-          {item.gender?.[0] + item.gender?.slice(1).toLowerCase()}
+          <span
+            className={`px-2 py-1 text-xs font-medium rounded-md text-white 
+              ${item.gender === "MALE" ? "bg-blue-300" : "bg-pink-300"} `}
+          >
+            {item.gender === "MALE" ? "Male" : "Female"}
+          </span>
         </td>
 
         <td className="hidden md:table-cell">
-          {enrollment?.class.grade.level}
+          {enrollment?.class.name || "-"}
+        </td>
+
+        <td className="hidden md:table-cell">
+          {enrollment?.class.grade.level || "-"}
         </td>
 
         <td className="hidden md:table-cell">{item.phone}</td>

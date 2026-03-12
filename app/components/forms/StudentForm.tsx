@@ -16,18 +16,6 @@ import Image from "next/image";
 
 
 export type StudentRelatedData = {
-  grades: {
-    id: number;
-    level: string;
-  }[];
-  classes: {
-    id: number;
-    name: string;
-    capacity: number;
-    _count: {
-      students: number;
-    }
-  }[];
   parents: {
     id: string;
     name: string;
@@ -75,11 +63,9 @@ const StudentForm = ({ type, data, relatedData }: StudentFormProps) => {
       address: data?.address ?? "",
       gender: data?.gender ?? "MALE",
       birthday: data?.birthday
-        ? data.birthday.toISOString().split("T")[0]
+        ? new Date(data.birthday).toISOString().split("T")[0]
         : "",
       parentId: data?.parentId,
-      gradeId: data?.gradeId,
-      classId: data?.classId,
     },
   });
 
@@ -108,30 +94,43 @@ const StudentForm = ({ type, data, relatedData }: StudentFormProps) => {
           img: img ?? data?.img,
         });
 
-        await createStudent(parsed);
+        const res = await createStudent(parsed);
+
+        if (!res.success) {
+          toast.error(res.error || "Create student failed");
+          return;
+        }
+
+        toast.success("Student created!");
         reset();
         setImg(null);
+
       } else {
         const parsed = updateStudentSchema.parse({
           ...formData,
           img: img ?? data?.img,
         });
 
-        await updateStudent(parsed);
+        const res = await updateStudent(parsed);
+
+        if (!res.success) {
+          toast.error(res.error || "Update student failed");
+          return;
+        }
+
+        toast.success("Student updated!");
       }
 
-      toast.success(`Student has been ${type === "create" ? "created" : "updated"}!`);
       router.refresh();
+
     } catch (err) {
       toast.error("Something went wrong!");
-      console.log(err)
+      console.log(err);
     } finally {
       setIsPending(false);
     }
   });
 
-  const grades = relatedData?.grades ?? [];
-  const classes = relatedData?.classes ?? [];
   const parents = relatedData?.parents ?? [];
 
   const parentOptions = parents.map((p) => ({
@@ -185,32 +184,6 @@ const StudentForm = ({ type, data, relatedData }: StudentFormProps) => {
           <InputField<StudentFormInput> label="Address" name="address" register={register} error={errors?.address} />
           <InputField<StudentFormInput> label="Birthday" name="birthday" type="date" register={register} error={errors?.birthday} />
           <InputField<StudentFormInput> label="Id" name="id" register={register} error={errors?.id} hidden />
-          <SelectField<StudentFormInput>
-            label="Class"
-            name="classId"
-            register={register}
-            error={errors?.classId}
-            options={[
-              { label: "Select class", value: "" },
-              ...classes.map((c) => ({
-                label: `(${c.name} - ${c._count.students}/${c.capacity} Capacity)`,
-                value: c.id.toString(),
-              }))
-            ]}
-          />
-          <SelectField<StudentFormInput>
-            label="Grade"
-            name="gradeId"
-            register={register}
-            error={errors?.gradeId}
-            options={[
-              { label: "Select grade", value: "" },
-              ...grades.map((g) => ({
-                label: g.level,
-                value: g.id.toString(),
-              }))
-            ]}
-          />
           <SearchableSelectField<StudentFormInput>
             label="Parent"
             name="parentId"

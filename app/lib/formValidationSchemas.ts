@@ -141,6 +141,9 @@ export const enrollmentSchema = z.object({
   academicYearId: z.coerce.number(),
 });
 
+export type EnrollFormInput = z.input<typeof enrollmentSchema>;
+export type EnrollSchema = z.output<typeof enrollmentSchema>;
+
 /*----------------------------------------------------------------*/
 /*                        EXAM SCHEMA                             */
 /*----------------------------------------------------------------*/

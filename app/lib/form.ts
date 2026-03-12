@@ -16,6 +16,7 @@ export type TableType =
   | "class"
   | "schedule"
   | "academicYear"
+  | "enrollment"
   | "exam"
   | "assignment"
   | "result"
