@@ -94,17 +94,19 @@ const CustomEvent = ({ event }: EventProps<CalendarEvent>) => {
 
 const eventStyleGetter = (event: CalendarEvent) => {
   let backgroundColor = "#e2f8ff";
+  let borderColor = "#38bdf8";
 
-  if (event.type === "exam") backgroundColor = "#fef9c3";
-  if (event.type === "assignment") backgroundColor = "#dcfce7";
-  if (event.type === "event") backgroundColor = "#fde68a";
+  if (event.type === "exam") { backgroundColor = "#fef9c3"; borderColor = "#facc15"; }
+  if (event.type === "assignment") { backgroundColor = "#dcfce7"; borderColor = "#22c55e"; }
+  if (event.type === "event") { backgroundColor = "#ffc8dd"; borderColor = "#f472b6"; }
 
   return {
     style: {
       backgroundColor,
+      border: `1px solid ${borderColor}`,
       borderRadius: "8px",
-      border: "none",
       color: "#000",
+      boxShadow: "0 6px 16px rgba(0,0,0,0.08)"
     },
   };
 };
@@ -213,24 +215,26 @@ const BigCalendar = ({
   /* ===================================================== */
 
   return (
-    <Calendar
-      localizer={localizer}
-      events={allEvents}
-      startAccessor="start"
-      endAccessor="end"
-      views={[Views.WEEK, Views.DAY]}
-      view={view}
-      date={currentDate}
-      onNavigate={(date) => setCurrentDate(date)}
-      onView={(v) => setView(v)}
-      components={{ event: CustomEvent }}
-      eventPropGetter={eventStyleGetter}
-      step={60}
-      timeslots={1}
-      min={new Date(0, 0, 0, 7)}
-      max={new Date(0, 0, 0, 18)}
-      style={{ height: 1200 }}
-    />
+    <div>
+      <Calendar
+        localizer={localizer}
+        events={allEvents}
+        startAccessor="start"
+        endAccessor="end"
+        views={[Views.WEEK, Views.DAY]}
+        view={view}
+        date={currentDate}
+        onNavigate={(date) => setCurrentDate(date)}
+        onView={(v) => setView(v)}
+        components={{ event: CustomEvent }}
+        eventPropGetter={eventStyleGetter}
+        step={60}
+        timeslots={1}
+        min={new Date(0, 0, 0, 7)}
+        max={new Date(0, 0, 0, 18)}
+        style={{ height: 1200 }}
+      />
+    </div>
   );
 };
 

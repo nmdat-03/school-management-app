@@ -41,89 +41,82 @@ const ParentListPage = async ({
 
   /* ================= QUERY BUILD ================= */
 
-  const query: Prisma.ParentWhereInput = {};
+  const query: Prisma.ParentWhereInput = {
+    ...((queryParams.classId || queryParams.gradeLevel || role === "teacher") && {
+      students: {
+        some: {
+          enrollments: {
+            some: {
+              ...(queryParams.classId && {
+                classId: Number(queryParams.classId),
+              }),
 
-  if (queryParams.classId || queryParams.gradeLevel) {
-    query.students = {
-      some: {
-        enrollments: {
-          some: {
-            ...(queryParams.classId && {
-              classId: Number(queryParams.classId),
-            }),
-            ...(queryParams.gradeLevel && {
-              class: {
-                grade: {
-                  level: Number(queryParams.gradeLevel),
+              ...(queryParams.gradeLevel && {
+                class: {
+                  grade: {
+                    level: Number(queryParams.gradeLevel),
+                  },
                 },
-              },
-            }),
-          },
-        },
-      },
-    };
-  }
+              }),
 
-  if (role === "teacher") {
-    query.students = {
-      some: {
-        enrollments: {
-          some: {
-            class: {
-              schedules: {
-                some: {
-                  teacherId: currentUserId!,
+              ...(role === "teacher" && {
+                class: {
+                  schedules: {
+                    some: {
+                      teacherId: currentUserId!,
+                    },
+                  },
                 },
-              },
+              }),
             },
           },
         },
       },
-    };
-  }
+    }),
 
-  if (queryParams.search) {
-    query.OR = [
-      {
-        name: {
-          contains: queryParams.search,
-          mode: "insensitive",
-        },
-      },
-      {
-        surname: {
-          contains: queryParams.search,
-          mode: "insensitive",
-        },
-      },
-      {
-        email: {
-          contains: queryParams.search,
-          mode: "insensitive",
-        },
-      },
-      {
-        students: {
-          some: {
-            OR: [
-              {
-                name: {
-                  contains: queryParams.search,
-                  mode: "insensitive",
-                },
-              },
-              {
-                surname: {
-                  contains: queryParams.search,
-                  mode: "insensitive",
-                },
-              },
-            ],
+    ...(queryParams.search && {
+      OR: [
+        {
+          name: {
+            contains: queryParams.search,
+            mode: "insensitive",
           },
         },
-      },
-    ];
-  }
+        {
+          surname: {
+            contains: queryParams.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          email: {
+            contains: queryParams.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          students: {
+            some: {
+              OR: [
+                {
+                  name: {
+                    contains: queryParams.search,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  surname: {
+                    contains: queryParams.search,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    }),
+  };
 
   /* ================= DATA ================= */
 
@@ -147,6 +140,7 @@ const ParentListPage = async ({
           },
         },
       },
+      orderBy: { createdAt: "desc" },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (currentPage - 1),
     }),
@@ -173,6 +167,7 @@ const ParentListPage = async ({
     {
       header: "Info",
       accessor: "info",
+      className: "w-68"
     },
     {
       header: "Student Names",
@@ -214,11 +209,17 @@ const ParentListPage = async ({
         <div className="flex flex-col">
           {item.students.length ? (
             item.students.map((student) =>
-              student.enrollments.map((e) => (
-                <span key={`${student.id}-${e.class.id}`}>
-                  {student.surname} {student.name} ({e.class.name})
+              student.enrollments.length > 0 ? (
+                student.enrollments.map((e) => (
+                  <span key={`${student.id}-${e.class.id}`}>
+                    {student.surname} {student.name} ({e.class.name})
+                  </span>
+                ))
+              ) : (
+                <span key={student.id}>
+                  {student.surname} {student.name} (No class)
                 </span>
-              ))
+              )
             )
           ) : (
             <span>-</span>

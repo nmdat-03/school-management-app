@@ -105,14 +105,13 @@
 }
 
 .rbc-event {
-    border: none !important;
     color: black !important;
     padding: 10px !important;
     margin: 5px !important;
-    width: 99% !important;
 }
 
 .rbc-event-label {
-    color: gray !important;
+    font-size: 10px !important;
+    color: black !important;
     margin-bottom: 5px;
 }

@@ -13,6 +13,11 @@ export type ScheduleRelatedData = {
     classes: {
         id: number;
         name: string;
+        grade: { level: number }
+    }[];
+    grades: {
+        id: number;
+        level: number;
     }[];
     subjects: {
         id: number;
@@ -50,27 +55,59 @@ const ScheduleForm = ({ type, data, relatedData }: ScheduleFormProps) => {
         defaultValues: data
             ? {
                 ...data,
-                startTime: data.startTime,
-                endTime: data.endTime,
+                gradeLevel: relatedData?.classes
+                    ?.find((c) => c.id === data.classId)
+                    ?.grade.level.toString(),
+
                 classId: data.classId.toString(),
                 subjectId: data.subjectId.toString(),
                 teacherId: data.teacherId,
+
+                startTime: data.startTime,
+                endTime: data.endTime,
+
                 id: data.id?.toString(),
             }
             : undefined,
     });
 
-    const selectedSubjectId = watch("subjectId");
-
     const classes = relatedData?.classes ?? [];
+    const grades = relatedData?.grades ?? [];
     const subjects = relatedData?.subjects ?? [];
 
+    /*========== SELECT GRADE => CLASS ==========*/
+
+    const selectedGrade = watch("gradeLevel");
+
     useEffect(() => {
+        if (!selectedGrade || type === "update") return;
+
+        reset((prev) => ({
+            ...prev,
+            classId: "",
+        }));
+    }, [selectedGrade]);
+
+    const filteredClasses = useMemo(() => {
+        if (!selectedGrade) return [];
+
+        return classes.filter(
+            (c) => c.grade.level.toString() === selectedGrade
+        );
+    }, [selectedGrade, classes]);
+
+    /*========== SELECT SUBJECT => TEACHER ==========*/
+
+    const selectedSubjectId = watch("subjectId");
+
+    useEffect(() => {
+        if (!selectedSubjectId || type === "update") return;
+
         reset((prev) => ({
             ...prev,
             teacherId: "",
         }));
-    }, [selectedSubjectId, reset]);
+    }, [selectedSubjectId]);
 
     const filteredTeachers = useMemo(() => {
         if (!selectedSubjectId) return [];
@@ -78,11 +115,13 @@ const ScheduleForm = ({ type, data, relatedData }: ScheduleFormProps) => {
         const teacherList = relatedData?.teachers ?? [];
 
         return teacherList.filter((teacher) =>
-            teacher.subjects.some(
+            (teacher.subjects ?? []).some(
                 (subject) => subject.id.toString() === selectedSubjectId
             )
         );
     }, [selectedSubjectId, relatedData?.teachers]);
+
+    /*========== HANDLE SUBMIT ==========*/
 
     const onSubmit = handleSubmit(async (data) => {
         setIsPending(true);
@@ -124,13 +163,27 @@ const ScheduleForm = ({ type, data, relatedData }: ScheduleFormProps) => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <SelectField<ScheduleFormInput>
+                    label="Grade"
+                    name="gradeLevel"
+                    register={register}
+                    error={errors?.gradeLevel}
+                    options={[
+                        { label: "Select grade", value: "" },
+                        ...grades.map((g) => ({
+                            label: `Grade ${g.level}`,
+                            value: g.level.toString(),
+                        })),
+                    ]}
+                />
+                <SelectField<ScheduleFormInput>
+                    disabled={!selectedGrade}
                     label="Class"
                     name="classId"
                     register={register}
                     error={errors?.classId}
                     options={[
                         { label: "Select class", value: "" },
-                        ...classes.map((c) => ({
+                        ...filteredClasses.map((c) => ({
                             label: `${c.name}`,
                             value: c.id.toString(),
                         }))
@@ -150,7 +203,7 @@ const ScheduleForm = ({ type, data, relatedData }: ScheduleFormProps) => {
                     ]}
                 />
                 <SelectField<ScheduleFormInput>
-                    disabled={!selectedSubjectId}
+                    disabled={!selectedSubjectId || !watch("classId")}
                     label="Teacher"
                     name="teacherId"
                     register={register}

@@ -38,27 +38,29 @@ const ScheduleListPage = async ({
 
   /* ================= QUERY BUILD ================= */
 
-  const andConditions: Prisma.ScheduleWhereInput[] = [];
-
-  if (queryParams.classId) {
-    andConditions.push({
+  const query: Prisma.ScheduleWhereInput = {
+    ...(queryParams.classId && {
       classId: Number(queryParams.classId),
-    });
-  }
+    }),
 
-  if (queryParams.gradeLevel) {
-    andConditions.push({
+    ...(queryParams.gradeLevel && {
       class: {
         grade: {
           level: Number(queryParams.gradeLevel),
         },
       },
-    });
-  }
+    }),
 
-  if (queryParams.search) {
-    andConditions.push({
+    ...(queryParams.search && {
       OR: [
+        {
+          subject: {
+            name: {
+              contains: queryParams.search,
+              mode: "insensitive",
+            },
+          },
+        },
         {
           teacher: {
             OR: [
@@ -77,55 +79,60 @@ const ScheduleListPage = async ({
             ],
           },
         },
-        {
-          subject: {
-            name: {
-              contains: queryParams.search,
-              mode: "insensitive",
-            },
-          },
-        },
       ],
-    });
-  }
+    }),
+  };
 
-  const query: Prisma.ScheduleWhereInput = andConditions.length > 0 ? { AND: andConditions } : {};
+  /* ================= DATA ================= */
+
+  const [count, data, classes, grades, subjects, teachers] = await Promise.all([
+    prisma.schedule.count({ where: query }),
+
+    prisma.schedule.findMany({
+      where: query,
+      include: {
+        subject: { select: { name: true } },
+        class: { select: { name: true, grade: true } },
+        teacher: { select: { name: true, surname: true } },
+      },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (currentPage - 1),
+    }),
+
+    prisma.class.findMany({
+      include: { grade: true },
+      orderBy: { name: "asc" },
+    }),
+
+    prisma.grade.findMany({
+      orderBy: { level: "asc" },
+    }),
+
+    prisma.subject.findMany({
+      select: { id: true, name: true }
+    }),
+
+    prisma.teacher.findMany({
+      select: {
+        id: true,
+        name: true,
+        surname: true,
+        subjects: {
+          select: { id: true }
+        }
+      }
+    })
+  ])
+
+  const relatedData = { classes, grades, subjects, teachers }
 
   /* ================= COUNT ================= */
-
-  const count = await prisma.schedule.count({ where: query });
 
   const totalPages = Math.ceil(count / ITEM_PER_PAGE);
 
   if (currentPage > totalPages && totalPages > 0) {
     redirect(`?page=${totalPages}`);
   }
-
-  /* ================= DATA ================= */
-
-  const data = await prisma.schedule.findMany({
-    where: query,
-    include: {
-      subject: { select: { name: true } },
-      class: { select: { name: true, grade: true } },
-      teacher: { select: { name: true, surname: true } },
-    },
-    take: ITEM_PER_PAGE,
-    skip: ITEM_PER_PAGE * (currentPage - 1),
-  });
-
-  /* ================= CLASSES ================= */
-
-  const classes = await prisma.class.findMany({
-    include: { grade: true },
-    orderBy: { name: "asc" },
-  });
-
-  /* ================= GRADES ================= */
-
-  const grades = await prisma.grade.findMany({
-    orderBy: { level: "asc" },
-  });
 
   /* ================= TABLE ================= */
 
@@ -184,7 +191,7 @@ const ScheduleListPage = async ({
         <div className="flex items-center gap-2">
           {role === "admin" && (
             <>
-              <FormContainer table="schedule" type="update" data={item} />
+              <FormContainer table="schedule" type="update" data={item} relatedData={relatedData} />
               <FormContainer table="schedule" type="delete" id={item.id} />
             </>
           )}
@@ -227,7 +234,7 @@ const ScheduleListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-200">
               <ArrowDownWideNarrow size={18} />
             </button>
-            {role === "admin" && <FormContainer table="schedule" type="create" />}
+            {role === "admin" && <FormContainer table="schedule" type="create" relatedData={relatedData} />}
           </div>
         </div>
       </div>

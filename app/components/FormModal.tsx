@@ -4,7 +4,7 @@ import { FC, useState, ReactNode, ReactElement } from "react";
 import dynamic from "next/dynamic";
 import { Plus, Edit, Trash2, TriangleAlert, X, Loader2 } from "lucide-react";
 
-import type { SubjectSchema, ClassSchema, TeacherSchema, StudentSchema, ExamSchema, ParentSchema, ScheduleSchema, AcademicYearSchema, AssignmentSchema, EnrollSchema } from "@/lib/formValidationSchemas";
+import type { SubjectSchema, ClassSchema, TeacherSchema, StudentSchema, ExamSchema, ParentSchema, ScheduleSchema, AcademicYearSchema, AssignmentSchema, EnrollSchema, EventSchema } from "@/lib/formValidationSchemas";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { TableType } from "@/lib/form";
@@ -25,6 +25,8 @@ import { deleteSchedule } from "@/lib/actions/schedule.action";
 import { deleteAcademicYear } from "@/lib/actions/academicYear.action";
 import { AssignmentRelatedData } from "./forms/AssignmentForm";
 import { deleteAssignment } from "@/lib/actions/assignment.action";
+import { EventRelatedData } from "./forms/EventForm";
+import { deleteEvent } from "@/lib/actions/event.action";
 
 type FormType = "create" | "update";
 type ModalType = FormType | "delete";
@@ -118,6 +120,11 @@ const AssignmentForm = dynamic<BaseFormProps<AssignmentSchema, AssignmentRelated
   { loading: () => <Loading /> }
 );
 
+const EventForm = dynamic<BaseFormProps<EventSchema, EventRelatedData>>(
+  () => import("./forms/EventForm"),
+  { loading: () => <Loading /> }
+);
+
 
 
 const forms: Partial<Record<TableType, FormRenderer>> = {
@@ -150,6 +157,9 @@ const forms: Partial<Record<TableType, FormRenderer>> = {
   ),
   assignment: (type, data, relatedData) => (
     <AssignmentForm type={type} data={data as AssignmentSchema} relatedData={relatedData as AssignmentRelatedData} />
+  ),
+  event: (type, data, relatedData) => (
+    <EventForm type={type} data={data as EventSchema} relatedData={relatedData as EventRelatedData} />
   ),
 };
 
@@ -219,6 +229,10 @@ const RenderForm: FC<RenderFormProps> = ({
 
           case "assignment":
             res = await deleteAssignment(id as number);
+            break;
+
+          case "event":
+            res = await deleteEvent(id as number);
             break;
 
           default:

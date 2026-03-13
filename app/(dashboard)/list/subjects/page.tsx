@@ -35,38 +35,38 @@ const SubjectListPage = async ({
 
   /* ================= QUERY BUILD ================= */
 
-  const query: Prisma.SubjectWhereInput = {};
-
-  if (queryParams.search) {
-    query.OR = [
-      {
-        name: {
-          contains: queryParams.search,
-          mode: "insensitive",
-        },
-      },
-      {
-        teachers: {
-          some: {
-            OR: [
-              {
-                name: {
-                  contains: queryParams.search,
-                  mode: "insensitive",
-                },
-              },
-              {
-                surname: {
-                  contains: queryParams.search,
-                  mode: "insensitive",
-                },
-              },
-            ],
+  const query: Prisma.SubjectWhereInput = {
+    ...(queryParams.search && {
+      OR: [
+        {
+          name: {
+            contains: queryParams.search,
+            mode: "insensitive",
           },
         },
-      },
-    ];
-  }
+        {
+          teachers: {
+            some: {
+              OR: [
+                {
+                  name: {
+                    contains: queryParams.search,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  surname: {
+                    contains: queryParams.search,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    }),
+  };
 
   /* ================= DATA ================= */
 
@@ -78,6 +78,7 @@ const SubjectListPage = async ({
       include: {
         teachers: true,
       },
+      orderBy: { name: "asc" },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (currentPage - 1),
     }),

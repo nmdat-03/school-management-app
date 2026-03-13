@@ -50,8 +50,13 @@ const BigCalendarContainer = async ({ type, id }: Props) => {
 
   const events = await prisma.event.findMany({
     where: {
-      ...(type === "classId" ? { classId: Number(id) } : {}),
+      ...(type === "classId"
+        ? {
+          OR: [{ classId: Number(id) }, { classId: null }],
+        }
+        : {}),
     },
+    orderBy: { startTime: "asc" },
   });
 
   return (

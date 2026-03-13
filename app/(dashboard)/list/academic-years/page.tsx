@@ -35,36 +35,35 @@ const AcademicYearListPage = async ({
 
     /* ================= QUERY BUILD ================= */
 
-    const query: Prisma.AcademicYearWhereInput = {};
-
-    if (queryParams.search) {
-        query.OR = [
-            {
-                name: {
-                    contains: queryParams.search,
-                    mode: "insensitive",
-                },
+    const query: Prisma.AcademicYearWhereInput = {
+        ...(queryParams.search && {
+            name: {
+                contains: queryParams.search,
+                mode: "insensitive",
             },
-        ];
-    }
+        }),
+    };
+
+    /* ================= DATA ================= */
+
+    const [count, data] = await Promise.all([
+        prisma.academicYear.count({ where: query }),
+
+        prisma.academicYear.findMany({
+            where: query,
+            include: {},
+            take: ITEM_PER_PAGE,
+            skip: ITEM_PER_PAGE * (currentPage - 1),
+        })
+    ])
 
     /* ================= COUNT ================= */
 
-    const count = await prisma.academicYear.count({ where: query });
     const totalPages = Math.ceil(count / ITEM_PER_PAGE);
 
     if (currentPage > totalPages && totalPages > 0) {
         redirect(`?page=${totalPages}`);
     }
-
-    /* ================= DATA ================= */
-
-    const data = await prisma.academicYear.findMany({
-        where: query,
-        include: {},
-        take: ITEM_PER_PAGE,
-        skip: ITEM_PER_PAGE * (currentPage - 1),
-    });
 
     /* ================= TABLE ================= */
 

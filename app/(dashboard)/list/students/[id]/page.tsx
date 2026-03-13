@@ -309,7 +309,7 @@ const SingleStudentPage = async ({
       </div>
 
       {/* CALENDAR */}
-      <div className="w-full h-[1200px] p-4 bg-white rounded-xl shadow-md">
+      <div className="w-full h-[1270px] p-4 bg-white rounded-xl shadow-md">
         <h1 className="font-semibold mb-4">Student&apos;s Schedule</h1>
 
         {studentClass ? (

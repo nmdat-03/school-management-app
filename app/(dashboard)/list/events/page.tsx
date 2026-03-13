@@ -39,8 +39,12 @@ const EventListPage = async ({
   /* ================= QUERY BUILD ================= */
 
   const query: Prisma.EventWhereInput = {
-    ...(queryParams.classId && {
-      classId: Number(queryParams.classId),
+    ...(queryParams.classId &&
+      queryParams.classId !== "all" && {
+      OR: [
+        { classId: Number(queryParams.classId) },
+        { classId: null },
+      ],
     }),
 
     ...(queryParams.gradeLevel && {
@@ -66,35 +70,56 @@ const EventListPage = async ({
       break;
 
     case "teacher":
-      query.class = {
-        schedules: {
-          some: {
-            teacherId: currentUserId!,
-          },
-        },
-      };
-      break;
-
-    case "student":
-      query.class = {
-        enrollments: {
-          some: {
-            studentId: currentUserId!,
-          },
-        },
-      };
-      break;
-
-    case "parent":
-      query.class = {
-        enrollments: {
-          some: {
-            student: {
-              parentId: currentUserId!,
+      query.OR = [
+        {
+          class: {
+            schedules: {
+              some: {
+                teacherId: currentUserId!,
+              },
             },
           },
         },
-      };
+        {
+          classId: null,
+        },
+      ];
+      break;
+
+    case "student":
+      query.OR = [
+        {
+          class: {
+            enrollments: {
+              some: {
+                studentId: currentUserId!,
+              },
+            },
+          },
+        },
+        {
+          classId: null,
+        },
+      ];
+      break;
+
+    case "parent":
+      query.OR = [
+        {
+          class: {
+            enrollments: {
+              some: {
+                student: {
+                  parentId: currentUserId!,
+                },
+              },
+            },
+          },
+        },
+        {
+          classId: null,
+        },
+      ];
       break;
 
     default:
@@ -111,9 +136,7 @@ const EventListPage = async ({
       include: {
         class: true,
       },
-      orderBy: {
-        startTime: "desc",
-      },
+      orderBy: { startTime: "desc" },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (currentPage - 1),
     }),
@@ -127,6 +150,8 @@ const EventListPage = async ({
       orderBy: { level: "asc" },
     }),
   ]);
+
+  const relatedData = { classes }
 
   const totalPages = Math.ceil(count / ITEM_PER_PAGE);
 
@@ -189,7 +214,7 @@ const EventListPage = async ({
       >
         <td className="flex items-center gap-4 p-4">{item.title}</td>
 
-        <td className="hidden md:table-cell">{item.class?.name || "-"}</td>
+        <td className="hidden md:table-cell">{item.class?.name || "All Classes"}</td>
 
         <td className="hidden md:table-cell">
           {date}
@@ -203,7 +228,7 @@ const EventListPage = async ({
           <div className="flex items-center gap-2">
             {role === "admin" && (
               <>
-                <FormContainer table="event" type="update" data={item} />
+                <FormContainer table="event" type="update" data={item} relatedData={relatedData} />
                 <FormContainer table="event" type="delete" id={item.id} />
               </>
             )}
@@ -252,7 +277,7 @@ const EventListPage = async ({
             </button>
 
             {role === "admin" && (
-              <FormContainer table="event" type="create" />
+              <FormContainer table="event" type="create" relatedData={relatedData} />
             )}
           </div>
         </div>

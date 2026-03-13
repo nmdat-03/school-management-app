@@ -308,5 +308,53 @@ export const scheduleSchema = z
     },
   );
 
-export type ScheduleFormInput = z.input<typeof scheduleSchema>;
+export type ScheduleFormInput = z.input<typeof scheduleSchema> & {
+  gradeLevel?: string;
+};
 export type ScheduleSchema = z.output<typeof scheduleSchema>;
+
+/*----------------------------------------------------------------*/
+/*                         EVENT SCHEMA                           */
+/*----------------------------------------------------------------*/
+
+export const eventSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+
+    title: z.string().min(1, { message: "Event title is required!" }),
+    description: z.string().min(1, { message: "Description is required!" }),
+
+    startTime: z.coerce.date({ message: "Start time is required!" }),
+    endTime: z.coerce.date({ message: "End time is required!" }),
+
+    classId: z
+      .union([z.coerce.number(), z.literal("all")])
+      .transform((val) => (val === "all" ? null : val))
+      .nullable()
+      .optional(),
+  })
+  .refine((data) => data.endTime > data.startTime, {
+    message: "End time must be after start time",
+    path: ["endTime"],
+  });
+
+export type EventFormInput = z.input<typeof eventSchema>;
+export type EventSchema = z.output<typeof eventSchema>;
+
+/*----------------------------------------------------------------*/
+/*                     ANNOUNCEMENT SCHEMA                        */
+/*----------------------------------------------------------------*/
+
+export const announcementSchema = z.object({
+  id: z.coerce.number().optional(),
+
+  title: z.string().min(1, { message: "Title is required!" }),
+  description: z.string().min(1, { message: "Description is required!" }),
+
+  date: z.coerce.date({ message: "Date is required!" }),
+
+  classId: z.coerce.number().optional(),
+});
+
+export type AnnouncementFormInput = z.input<typeof announcementSchema>;
+export type AnnouncementSchema = z.output<typeof announcementSchema>;
