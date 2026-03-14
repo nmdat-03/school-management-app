@@ -198,6 +198,7 @@ const ExamListPage = async ({
     {
       header: "Title",
       accessor: "title",
+      className: "w-60"
     },
     {
       header: "Subject",
@@ -228,6 +229,7 @@ const ExamListPage = async ({
         {
           header: "Actions",
           accessor: "action",
+          className: "w-20"
         },
       ]
       : []),

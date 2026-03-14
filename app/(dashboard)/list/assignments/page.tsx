@@ -227,6 +227,7 @@ const AssignmentListPage = async ({
         {
           header: "Actions",
           accessor: "action",
+          className: "w-20"
         },
       ]
       : []),

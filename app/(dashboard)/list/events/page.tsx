@@ -38,30 +38,35 @@ const EventListPage = async ({
 
   /* ================= QUERY BUILD ================= */
 
-  const query: Prisma.EventWhereInput = {
-    ...(queryParams.classId &&
-      queryParams.classId !== "all" && {
+  const andConditions: Prisma.EventWhereInput[] = [];
+
+  if (queryParams.classId && queryParams.classId !== "all") {
+    andConditions.push({
       OR: [
         { classId: Number(queryParams.classId) },
         { classId: null },
       ],
-    }),
+    });
+  }
 
-    ...(queryParams.gradeLevel && {
+  if (queryParams.gradeLevel) {
+    andConditions.push({
       class: {
         grade: {
           level: Number(queryParams.gradeLevel),
         },
       },
-    }),
+    });
+  }
 
-    ...(queryParams.search && {
+  if (queryParams.search) {
+    andConditions.push({
       title: {
         contains: queryParams.search,
-        mode: "insensitive",
+        mode: Prisma.QueryMode.insensitive,
       },
-    }),
-  };
+    });
+  }
 
   /* ================= ROLE CONDITIONS ================= */
 
@@ -70,61 +75,65 @@ const EventListPage = async ({
       break;
 
     case "teacher":
-      query.OR = [
-        {
-          class: {
-            schedules: {
-              some: {
-                teacherId: currentUserId!,
-              },
-            },
-          },
-        },
-        {
-          classId: null,
-        },
-      ];
-      break;
-
-    case "student":
-      query.OR = [
-        {
-          class: {
-            enrollments: {
-              some: {
-                studentId: currentUserId!,
-              },
-            },
-          },
-        },
-        {
-          classId: null,
-        },
-      ];
-      break;
-
-    case "parent":
-      query.OR = [
-        {
-          class: {
-            enrollments: {
-              some: {
-                student: {
-                  parentId: currentUserId!,
+      andConditions.push({
+        OR: [
+          {
+            class: {
+              schedules: {
+                some: {
+                  teacherId: currentUserId!,
                 },
               },
             },
           },
-        },
-        {
-          classId: null,
-        },
-      ];
+          { classId: null },
+        ],
+      });
+      break;
+
+    case "student":
+      andConditions.push({
+        OR: [
+          {
+            class: {
+              enrollments: {
+                some: {
+                  studentId: currentUserId!,
+                },
+              },
+            },
+          },
+          { classId: null },
+        ],
+      });
+      break;
+
+    case "parent":
+      andConditions.push({
+        OR: [
+          {
+            class: {
+              enrollments: {
+                some: {
+                  student: {
+                    parentId: currentUserId!,
+                  },
+                },
+              },
+            },
+          },
+          { classId: null },
+        ],
+      });
       break;
 
     default:
       break;
   }
+
+  const query: Prisma.EventWhereInput = {
+    AND: andConditions,
+  };
 
   /* ================= DATA & COUNT ================= */
 
@@ -165,11 +174,12 @@ const EventListPage = async ({
     {
       header: "Title",
       accessor: "title",
+      className: "w-96"
     },
     {
       header: "Class",
       accessor: "class",
-      className: "hidden md:table-cell",
+      className: "hidden md:table-cell w-40",
     },
     {
       header: "Date",
@@ -186,6 +196,7 @@ const EventListPage = async ({
         {
           header: "Actions",
           accessor: "action",
+          className: "w-20"
         },
       ]
       : []),
@@ -212,7 +223,11 @@ const EventListPage = async ({
         key={item.id}
         className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-blue-100"
       >
-        <td className="flex items-center gap-4 p-4">{item.title}</td>
+        <td className="flex items-center gap-4 p-4 max-w-96">
+          <div className="truncate font-medium">
+            {item.title}
+          </div>
+        </td>
 
         <td className="hidden md:table-cell">{item.class?.name || "All Classes"}</td>
 

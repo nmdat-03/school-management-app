@@ -181,6 +181,7 @@ const StudentListPage = async ({
         {
           header: "Actions",
           accessor: "action",
+          className: "w-20"
         },
       ]
       : []),

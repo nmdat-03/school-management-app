@@ -4,7 +4,7 @@ import { FC, useState, ReactNode, ReactElement } from "react";
 import dynamic from "next/dynamic";
 import { Plus, Edit, Trash2, TriangleAlert, X, Loader2 } from "lucide-react";
 
-import type { SubjectSchema, ClassSchema, TeacherSchema, StudentSchema, ExamSchema, ParentSchema, ScheduleSchema, AcademicYearSchema, AssignmentSchema, EnrollSchema, EventSchema } from "@/lib/formValidationSchemas";
+import type { SubjectSchema, ClassSchema, TeacherSchema, StudentSchema, ExamSchema, ParentSchema, ScheduleSchema, AcademicYearSchema, AssignmentSchema, EnrollSchema, EventSchema, AnnouncementSchema } from "@/lib/formValidationSchemas";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { TableType } from "@/lib/form";
@@ -27,6 +27,8 @@ import { AssignmentRelatedData } from "./forms/AssignmentForm";
 import { deleteAssignment } from "@/lib/actions/assignment.action";
 import { EventRelatedData } from "./forms/EventForm";
 import { deleteEvent } from "@/lib/actions/event.action";
+import { AnnouncementRelatedData } from "./forms/AnnouncementForm";
+import { deleteAnnouncement } from "@/lib/actions/announcement.action";
 
 type FormType = "create" | "update";
 type ModalType = FormType | "delete";
@@ -125,6 +127,11 @@ const EventForm = dynamic<BaseFormProps<EventSchema, EventRelatedData>>(
   { loading: () => <Loading /> }
 );
 
+const AnnouncementForm = dynamic<BaseFormProps<AnnouncementSchema, AnnouncementRelatedData>>(
+  () => import("./forms/AnnouncementForm"),
+  { loading: () => <Loading /> }
+);
+
 
 
 const forms: Partial<Record<TableType, FormRenderer>> = {
@@ -160,6 +167,9 @@ const forms: Partial<Record<TableType, FormRenderer>> = {
   ),
   event: (type, data, relatedData) => (
     <EventForm type={type} data={data as EventSchema} relatedData={relatedData as EventRelatedData} />
+  ),
+  announcement: (type, data, relatedData) => (
+    <AnnouncementForm type={type} data={data as AnnouncementSchema} relatedData={relatedData as AnnouncementRelatedData} />
   ),
 };
 
@@ -233,6 +243,10 @@ const RenderForm: FC<RenderFormProps> = ({
 
           case "event":
             res = await deleteEvent(id as number);
+            break;
+
+          case "announcement":
+            res = await deleteAnnouncement(id as number);
             break;
 
           default:

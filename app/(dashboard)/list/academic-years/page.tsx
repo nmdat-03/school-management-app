@@ -91,6 +91,7 @@ const AcademicYearListPage = async ({
                 {
                     header: "Actions",
                     accessor: "action",
+                    className: "w-20"
                 },
             ]
             : []),

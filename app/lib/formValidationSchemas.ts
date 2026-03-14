@@ -353,7 +353,11 @@ export const announcementSchema = z.object({
 
   date: z.coerce.date({ message: "Date is required!" }),
 
-  classId: z.coerce.number().optional(),
+  classId: z
+    .union([z.coerce.number(), z.literal("all")])
+    .transform((val) => (val === "all" ? null : val))
+    .nullable()
+    .optional(),
 });
 
 export type AnnouncementFormInput = z.input<typeof announcementSchema>;

@@ -101,7 +101,8 @@ const SubjectListPage = async ({
   const columns = [
     {
       header: "Subject Name",
-      accessor: "name",
+      accessor: "subjectName",
+      className: "w-80"
     },
     {
       header: "Teachers",
@@ -113,6 +114,7 @@ const SubjectListPage = async ({
         {
           header: "Actions",
           accessor: "action",
+          className: "w-20"
         },
       ]
       : []),

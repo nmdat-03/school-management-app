@@ -140,6 +140,7 @@ const ScheduleListPage = async ({
     {
       header: "Subject",
       accessor: "subject",
+      className: "w-60"
     },
     {
       header: "Class",
@@ -149,7 +150,7 @@ const ScheduleListPage = async ({
     {
       header: "Day",
       accessor: "day",
-      className: "hidden md:table-cell",
+      className: "hidden md:table-cell w-32",
     },
     {
       header: "Start Time",
@@ -171,6 +172,7 @@ const ScheduleListPage = async ({
         {
           header: "Actions",
           accessor: "action",
+          className: "w-20"
         },
       ]
       : []),
