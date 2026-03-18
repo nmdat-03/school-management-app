@@ -11,19 +11,30 @@ const StudentPage = async ({
 }) => {
   const { userId } = await auth();
 
-  const classItem = await prisma.class.findMany({
+  const enrollment = await prisma.enrollment.findFirst({
     where: {
-      students: { some: { id: userId! } },
+      studentId: userId!,
+    },
+    include: {
+      class: true,
     },
   });
+
+  const classItem = enrollment?.class;
 
   return (
     <div className="p-4 flex gap-4 flex-col xl:flex-row">
       {/* LEFT */}
       <div className="w-full xl:w-2/3">
         <div className="h-full bg-white p-4 rounded-md shadow-md">
-          <h1 className="text-xl font-semibold">Schedule ({classItem[0].name})</h1>
-          <BigCalendarContainer type="classId" id={classItem[0].id} />
+          <h1 className="text-xl font-semibold">Schedule ({classItem?.name ?? "No Class"})</h1>
+          {classItem ? (
+            <BigCalendarContainer type="classId" id={classItem.id} />
+          ) : (
+            <p className="text-gray-500 mt-4">
+              You are not assigned to any class yet.
+            </p>
+          )}
         </div>
       </div>
       {/* RIGHT */}

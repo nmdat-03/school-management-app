@@ -37,8 +37,9 @@ const StudentListPage = async ({
     searchParams: Promise<SearchParams>
   }) => {
 
-  const { sessionClaims } = await auth();
+  const { sessionClaims, userId } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const currentUserId = userId;
 
   const { page, ...queryParams } = await searchParams;
 
@@ -47,6 +48,20 @@ const StudentListPage = async ({
   /* ================= QUERY BUILD ================= */
 
   const query: Prisma.StudentWhereInput = {
+    ...(role === "teacher" && {
+      enrollments: {
+        some: {
+          class: {
+            schedules: {
+              some: {
+                teacherId: currentUserId!,
+              },
+            },
+          },
+        },
+      },
+    }),
+
     ...(queryParams.gender && {
       gender: queryParams.gender as UserGender,
     }),
@@ -109,6 +124,15 @@ const StudentListPage = async ({
     }),
 
     prisma.class.findMany({
+      where: role === "teacher"
+        ? {
+          schedules: {
+            some: {
+              teacherId: currentUserId!,
+            },
+          },
+        }
+        : {},
       include: {
         grade: true,
         enrollments: {
@@ -188,7 +212,7 @@ const StudentListPage = async ({
   ];
 
   const renderRow = (item: StudentList) => {
-    const enrollment = item.enrollments[0];
+    const enrollment = item.enrollments?.[0];
 
     return (
       <tr

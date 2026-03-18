@@ -30,8 +30,9 @@ const ClassListPage = async ({
   searchParams: Promise<SearchParams>;
 }) => {
 
-  const { sessionClaims } = await auth();
+  const { sessionClaims, userId } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const currentUserId = userId;
 
   const { page, ...queryParams } = await searchParams;
 
@@ -40,6 +41,21 @@ const ClassListPage = async ({
   /* ================= QUERY BUILD ================= */
 
   const query: Prisma.ClassWhereInput = {
+    ...(role === "teacher" && {
+      OR: [
+        {
+          schedules: {
+            some: {
+              teacherId: currentUserId!,
+            },
+          },
+        },
+        {
+          supervisorId: currentUserId!,
+        },
+      ],
+    }),
+
     ...(queryParams.classId && {
       id: Number(queryParams.classId),
     }),
@@ -113,6 +129,23 @@ const ClassListPage = async ({
     }),
 
     prisma.class.findMany({
+      where:
+        role === "teacher"
+          ? {
+            OR: [
+              {
+                schedules: {
+                  some: {
+                    teacherId: currentUserId!,
+                  },
+                },
+              },
+              {
+                supervisorId: currentUserId!,
+              },
+            ],
+          }
+          : {},
       include: { grade: true },
       orderBy: { name: "asc" },
     }),

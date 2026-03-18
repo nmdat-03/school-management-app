@@ -96,10 +96,10 @@ const LoginPage = () => {
             </div>
 
             {/* RIGHT SIDE */}
-            <div className="hidden md:flex bg-white items-center justify-center p-10">
+            <div className="hidden md:flex bg-white rounded-l-[120px] items-center justify-center p-10">
                 <div className="max-w-md text-center space-y-6">
                     <h1 className="text-4xl font-bold text-gray-800">
-                        School Management
+                        School Name
                     </h1>
                     <p className="text-lg text-gray-500">
                         Welcome back 👋 Please sign in to continue

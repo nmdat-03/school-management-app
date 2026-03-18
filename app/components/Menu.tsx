@@ -35,7 +35,7 @@ const menuItems = [
         icon: <GraduationCap />,
         label: "Teachers",
         href: "/list/teachers",
-        visible: ["admin", "teacher"],
+        visible: ["admin"],
       },
       {
         icon: <Backpack />,
@@ -65,13 +65,13 @@ const menuItems = [
         icon: <CalendarDays />,
         label: "Schedules",
         href: "/list/schedules",
-        visible: ["admin", "teacher"],
+        visible: ["admin"],
       },
       {
         icon: <Calendars />,
         label: "Academic Years",
         href: "/list/academic-years",
-        visible: ["admin", "teacher"],
+        visible: ["admin"],
       },
       {
         icon: <FilePen />,
@@ -83,7 +83,7 @@ const menuItems = [
         icon: <FileCheckCorner />,
         label: "Assignments",
         href: "/list/assignments",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "teacher", "student"],
       },
       {
         icon: <BookCheck />,

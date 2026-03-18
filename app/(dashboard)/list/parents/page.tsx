@@ -42,7 +42,25 @@ const ParentListPage = async ({
   /* ================= QUERY BUILD ================= */
 
   const query: Prisma.ParentWhereInput = {
-    ...((queryParams.classId || queryParams.gradeLevel || role === "teacher") && {
+    ...(role === "teacher" && {
+      students: {
+        some: {
+          enrollments: {
+            some: {
+              class: {
+                schedules: {
+                  some: {
+                    teacherId: currentUserId!,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+
+    ...((queryParams.classId || queryParams.gradeLevel) && {
       students: {
         some: {
           enrollments: {
@@ -58,16 +76,6 @@ const ParentListPage = async ({
                   },
                 },
               }),
-
-              ...(role === "teacher" && {
-                class: {
-                  schedules: {
-                    some: {
-                      teacherId: currentUserId!,
-                    },
-                  },
-                },
-              }),
             },
           },
         },
@@ -76,40 +84,15 @@ const ParentListPage = async ({
 
     ...(queryParams.search && {
       OR: [
-        {
-          name: {
-            contains: queryParams.search,
-            mode: "insensitive",
-          },
-        },
-        {
-          surname: {
-            contains: queryParams.search,
-            mode: "insensitive",
-          },
-        },
-        {
-          email: {
-            contains: queryParams.search,
-            mode: "insensitive",
-          },
-        },
+        { name: { contains: queryParams.search, mode: "insensitive" } },
+        { surname: { contains: queryParams.search, mode: "insensitive" } },
+        { email: { contains: queryParams.search, mode: "insensitive" } },
         {
           students: {
             some: {
               OR: [
-                {
-                  name: {
-                    contains: queryParams.search,
-                    mode: "insensitive",
-                  },
-                },
-                {
-                  surname: {
-                    contains: queryParams.search,
-                    mode: "insensitive",
-                  },
-                },
+                { name: { contains: queryParams.search, mode: "insensitive" } },
+                { surname: { contains: queryParams.search, mode: "insensitive" } },
               ],
             },
           },
@@ -146,6 +129,16 @@ const ParentListPage = async ({
     }),
 
     prisma.class.findMany({
+      where:
+        role === "teacher"
+          ? {
+            schedules: {
+              some: {
+                teacherId: currentUserId!,
+              },
+            },
+          }
+          : {},
       include: { grade: true },
       orderBy: { name: "asc" },
     }),
