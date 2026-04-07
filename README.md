@@ -5,32 +5,51 @@ A full-stack school management web application that helps administrators and tea
 ✨ Features
 
 👨‍💼 Admin
-Manage students (add, edit, delete)
-Manage teachers
-Create and manage classes
-Assign students to classes
+
++ Manage students (add, edit, delete)
+
++ Manage teachers
+
++ Create and manage classes
+
++ Assign students to classes
 
 👩‍🏫 Teacher
-View assigned classes
-Manage student scores
-Track student performance
+
++ View assigned classes
+
++ Manage student scores
+
++ Track student performance
 
 👨‍🎓 Student (optional)
-View personal information
-View scores and class schedule
+
++ View personal information
+
++ View scores and class schedule
 
 🛠️ Tech Stack
-Frontend: Next.js, React, TypeScript
-Styling: TailwindCSS, shadcn/ui
-State Management: Zustand
-Backend: Next.js API Routes / Express (tuỳ bạn)
-Database: Prisma + PostgreSQL / MySQL
-Authentication: Clerk / JWT
+
++ Frontend: Next.js, React, TypeScript
+
++ Styling: TailwindCSS
+
++ State Management: React Hook Form / Zod
+
++ Database: Prisma ORM + PostgreSQL
+
++ Authentication: Clerk
+
++ Image Upload: Cloudinary
 
 ⚙️ Installation
+
 git clone https://github.com/your-username/school-management.git
+
 cd school-management
+
 npm install
+
 npm run dev
 
 🔑 Environment Variables
@@ -38,8 +57,13 @@ npm run dev
 Create a .env file in the root directory:
 
 DATABASE_URL=""
+
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+
 CLERK_SECRET_KEY=
+
 NEXT_PUBLIC_CLERK_SIGN_IN_URL = /
+
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 
+
 NEXT_PUBLIC_CLOUDINARY_API_KEY =
