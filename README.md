@@ -3,6 +3,7 @@
 A full-stack school management web application that helps administrators and teachers manage students, classes, and academic information efficiently.
 
 ✨ Features
+
 👨‍💼 Admin
 Manage students (add, edit, delete)
 Manage teachers
@@ -33,7 +34,9 @@ npm install
 npm run dev
 
 🔑 Environment Variables
+
 Create a .env file in the root directory:
+
 DATABASE_URL=""
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
