@@ -2,6 +2,8 @@
 
 A full-stack school management web application that helps administrators and teachers manage students, classes, and academic information efficiently.
 
+Demo pictures: https://docs.google.com/document/d/1CBwxz9oHTqodeyoSjkrwvIxsyxWKTS-O_YGphclhRVU/edit?usp=drive_link
+
 ✨ Features
 
 👨‍💼 Admin
