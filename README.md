@@ -32,7 +32,7 @@ Demo pictures: https://docs.google.com/document/d/1CBwxz9oHTqodeyoSjkrwvIxsyxWKT
 
 ## ⚙️ Installation
 ```bash
-git clone https://github.com/nmdat-03/school-management.git
+git clone https://github.com/nmdat-03/school-management-app.git
 cd school-management
 pnpm install
 pnpm dev
